@@ -16,9 +16,19 @@
 }
 
 .pdf-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 18px;
   font-weight: 800;
   color: var(--brand-navy);
+}
+
+.pdf-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .pdf-meta {

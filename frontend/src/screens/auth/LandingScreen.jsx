@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Screen, Button, Field, TextInput, EmptyState } from '../../components/ui/Primitives';
 import { useApp, useAppActions, findRolesForCredentials, phoneHasAnyAccount } from '../../state/AppContext';
 import { DEMO_PASSWORD } from '../../lib/mockData';
+import logo from '../../assets/logo.png';
 
 function formatPhoneDigits(value) {
   return value.replace(/[^\d]/g, '').slice(0, 10);
@@ -25,7 +26,7 @@ export default function LandingScreen() {
     return (
       <Screen maxWidth={420}>
         <div className="landing-hero">
-          <div className="landing-logo">SSS</div>
+          <img src={logo} className="landing-logo" alt="Scholtz Scholar Service" />
           <h1 className="landing-title">Scholtz Scholar Service</h1>
           <p className="landing-trust">No owner account exists yet — let's set one up.</p>
         </div>
@@ -78,7 +79,7 @@ export default function LandingScreen() {
   return (
     <Screen maxWidth={420}>
       <div className="landing-hero">
-        <div className="landing-logo">SSS</div>
+        <img src={logo} className="landing-logo" alt="Scholtz Scholar Service" />
         <h1 className="landing-title">Scholtz Scholar Service</h1>
         <p className="landing-trust">Safe, tracked scholar transport — for owners and drivers.</p>
       </div>

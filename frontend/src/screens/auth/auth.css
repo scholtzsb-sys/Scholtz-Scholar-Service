@@ -8,17 +8,9 @@
 }
 
 .landing-logo {
-  width: 64px;
-  height: 64px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, var(--teal), var(--purple));
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 20px;
-  letter-spacing: 1px;
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
 }
 
 .landing-title {

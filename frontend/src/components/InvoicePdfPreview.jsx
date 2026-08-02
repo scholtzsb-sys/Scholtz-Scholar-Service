@@ -1,3 +1,4 @@
+import logo from '../assets/logo.png';
 import './invoicePdfPreview.css';
 
 // Mirrors the real brand identity (navy/yellow/sky-blue) used on the actual
@@ -6,7 +7,10 @@ export default function InvoicePdfPreview({ invoice, billing }) {
   return (
     <div className="pdf-preview">
       <div className="pdf-header">
-        <div className="pdf-brand">Scholtz Scholar Service</div>
+        <div className="pdf-brand">
+          <img src={logo} className="pdf-logo" alt="" />
+          Scholtz Scholar Service
+        </div>
         <div className="pdf-meta">
           <div className="pdf-invoice-label">INVOICE</div>
           <div>Invoice #{invoice.invoiceNumber}</div>
