@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pandoc -t markdown \"C:\\\\Users\\\\User\\\\Documents\\\\Software Developing\\\\Scholar Transport App\\\\Scholar_Transport_App_Vision_Rev 8.docx\")",
+      "PowerShell(Get-Command pandoc -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Command soffice -ErrorAction SilentlyContinue)",
+      "PowerShell(python --version)",
+      "Bash(command -v node)",
+      "Bash(grep -oE '<w:t[^>]*>[^<]*</w:t>|<w:p[ >]|<w:tab/>|<w:br/>' C:/Users/User/AppData/Local/Temp/claude/C--Users-User-Documents-Software-Developing-Scholar-Transport-App/174b1fec-8b21-42c4-9632-71fad397c83d/scratchpad/vision_extract/word/document.xml)",
+      "Bash(wc -c C:/Users/User/AppData/Local/Temp/claude/C--Users-User-Documents-Software-Developing-Scholar-Transport-App/174b1fec-8b21-42c4-9632-71fad397c83d/scratchpad/vision_extract/plain.txt)",
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "Bash(\"/c/Program Files/nodejs/node.exe\" --version)",
+      "Bash(\"/c/Program Files/nodejs/npm\" --version)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); node --version; npm --version)",
+      "Bash(rm -f App.css assets/hero.png assets/react.svg assets/vite.svg)",
+      "Bash(rmdir assets *)"
+    ]
+  }
+}

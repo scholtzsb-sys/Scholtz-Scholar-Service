@@ -1,0 +1,139 @@
+.driver-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 16px 32px;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+  flex: 1;
+}
+
+.driver-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.driver-greeting {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.driver-subgreeting {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+.stop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.stop-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+}
+
+.stop-complete {
+  opacity: 0.6;
+}
+
+.stop-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stop-order {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--purple-tint);
+  color: #5c3fc4;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stop-name {
+  font-size: 17px;
+  font-weight: 700;
+  flex: 1;
+}
+
+.stop-done-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.stop-action-btn {
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--teal);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 22px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.stop-action-btn:active {
+  transform: scale(0.98);
+}
+
+.notify-toast {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  max-width: 448px;
+  margin: 0 auto;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+  z-index: 20;
+}
+
+.notify-toast p {
+  margin: 0 0 8px;
+}
+
+.notify-toast ul {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.notify-toast button {
+  border: none;
+  background: var(--teal);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: 10px 20px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+}
+
+.driver-profile-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+  flex: 1;
+}

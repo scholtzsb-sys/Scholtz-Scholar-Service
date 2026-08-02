@@ -1,0 +1,227 @@
+.section-heading {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.alert-banner {
+  background: var(--coral-tint);
+  border-left: 4px solid var(--coral);
+}
+
+.alert-banner strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #b5372c;
+}
+
+.alert-banner ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #8a3128;
+  font-size: 14px;
+}
+
+.driver-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.driver-progress-row {
+  display: block;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 14px 16px;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.driver-progress-top {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.driver-progress-count {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--teal);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.list-search {
+  margin-bottom: 4px;
+}
+
+.scholar-row,
+.driver-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.scholar-row-info,
+.driver-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scholar-row-name,
+.driver-row-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.scholar-row-meta,
+.driver-row-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.deactivated-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.deactivated-row:last-child {
+  border-bottom: none;
+}
+
+.deactivated-row-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.deactivated-row-actions button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0;
+}
+
+.action-reactivate {
+  color: var(--teal-dark);
+}
+
+.action-delete {
+  color: var(--danger);
+}
+
+.list-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.detail-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-title h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.detail-title span {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.guardian-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.guardian-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.guardian-remove {
+  border: none;
+  background: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.add-contact-row {
+  display: flex;
+  gap: 10px;
+}
+
+.trip-stage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trip-stage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+}
+
+.stage-time {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.stage-pending {
+  color: var(--text-faint);
+  font-size: 13px;
+}

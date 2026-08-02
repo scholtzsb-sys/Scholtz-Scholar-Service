@@ -1,0 +1,142 @@
+.pdf-preview {
+  background: #ffffff;
+  color: #1a1f2b;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: 24px 20px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.pdf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pdf-brand {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--brand-navy);
+}
+
+.pdf-meta {
+  text-align: right;
+  font-size: 12px;
+  color: #566;
+}
+
+.pdf-invoice-label {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--brand-navy);
+}
+
+.pdf-rule {
+  height: 3px;
+  background: var(--brand-yellow);
+  margin: 12px 0 16px;
+  border-radius: 2px;
+}
+
+.pdf-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #778;
+  margin-bottom: 4px;
+}
+
+.pdf-bill-to {
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.pdf-bill-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.pdf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.pdf-table thead tr {
+  background: var(--brand-navy);
+  color: #fff;
+}
+
+.pdf-table th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+}
+
+.pdf-table th:last-child,
+.pdf-table td:last-child {
+  text-align: right;
+}
+
+.pdf-table td {
+  padding: 10px;
+  border-bottom: 1px solid #e6e8ee;
+  vertical-align: top;
+}
+
+.pdf-scholar-name {
+  font-weight: 600;
+}
+
+.pdf-scholar-meta {
+  font-size: 11px;
+  color: #667;
+}
+
+.pdf-totals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.pdf-totals > div {
+  display: flex;
+  gap: 16px;
+  min-width: 180px;
+  justify-content: space-between;
+}
+
+.pdf-total-final {
+  color: var(--brand-navy);
+  font-size: 15px;
+  border-top: 1px solid #e6e8ee;
+  padding-top: 6px;
+}
+
+.pdf-bank-box {
+  background: #f5f6f3;
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.pdf-bank-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+
+.pdf-footer {
+  font-size: 11px;
+  color: #778;
+  text-align: center;
+  margin: 0;
+}
