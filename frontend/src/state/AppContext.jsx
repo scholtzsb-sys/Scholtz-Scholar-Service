@@ -143,6 +143,19 @@ export function useAppActions() {
     [dispatch, loadCoreData]
   );
 
+  // Flips to the other role on the same phone (owner <-> driver) without
+  // re-entering a password — only valid when session.availableRoles
+  // includes the target, which the backend re-verifies independently.
+  const switchRole = useCallback(
+    async (role) => {
+      const result = await api.switchRole(role);
+      setToken(result.token);
+      dispatch({ type: 'SET_SESSION', session: result.session });
+      return result.session;
+    },
+    [dispatch]
+  );
+
   const logOut = useCallback(() => {
     clearToken();
     dispatch({ type: 'RESET' });
@@ -266,6 +279,7 @@ export function useAppActions() {
       loadCoreData,
       login,
       firstOwner,
+      switchRole,
       logOut,
       addSchool,
       addOwner,
@@ -288,6 +302,7 @@ export function useAppActions() {
       loadCoreData,
       login,
       firstOwner,
+      switchRole,
       logOut,
       addSchool,
       addOwner,

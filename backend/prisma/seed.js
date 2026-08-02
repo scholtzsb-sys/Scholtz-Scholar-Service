@@ -33,19 +33,19 @@ async function main() {
   const hashed = await bcrypt.hash(DEMO_PASSWORD, 10);
 
   const owner = await prisma.owner.create({
-    data: { name: 'Elias Scholtz', phone: '0835550142', password: hashed },
+    data: { name: 'Matthew Scholtz', phone: '0821111111', password: hashed },
   });
   const driver1 = await prisma.driver.create({
     data: {
-      name: 'Elias Scholtz',
-      phone: '0835550142',
+      name: 'Matthew Scholtz',
+      phone: '0821111111',
       password: hashed,
       vehicleReg: 'CA 123-456',
       linkedOwnerId: owner.id,
     },
   });
   const driver2 = await prisma.driver.create({
-    data: { name: 'Nomvula Khumalo', phone: '0821112233', password: hashed, vehicleReg: 'CA 987-654' },
+    data: { name: 'Nomvula Khumalo', phone: '0822222222', password: hashed, vehicleReg: 'CA 987-654' },
   });
 
   const oakwood = await prisma.school.create({ data: { name: 'Oakwood Primary' } });

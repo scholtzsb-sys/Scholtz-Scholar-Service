@@ -30,6 +30,7 @@ export const api = {
   firstOwner: (payload) => request('/auth/first-owner', { method: 'POST', body: payload, auth: false }),
   login: (payload) => request('/auth/login', { method: 'POST', body: payload, auth: false }),
   me: () => request('/auth/me'),
+  switchRole: (role) => request('/auth/switch-role', { method: 'POST', body: { role } }),
 
   // Schools
   listSchools: () => request('/schools'),

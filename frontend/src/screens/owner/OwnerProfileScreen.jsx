@@ -1,21 +1,38 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Screen, TopBar, Card, Button } from '../../components/ui/Primitives';
+import { Screen, TopBar, Card, Button, EmptyState } from '../../components/ui/Primitives';
 import { useApp, useAppActions } from '../../state/AppContext';
 import { useCurrentOwner } from '../../state/hooks';
 import './owner.css';
 
 export default function OwnerProfileScreen() {
   const { state } = useApp();
-  const { logOut } = useAppActions();
+  const { logOut, switchRole } = useAppActions();
   const owner = useCurrentOwner();
   const navigate = useNavigate();
+  const [switching, setSwitching] = useState(false);
+  const [error, setError] = useState('');
 
   function handleLogOut() {
     logOut();
     navigate('/', { replace: true });
   }
 
+  async function handleSwitchToDriver() {
+    setSwitching(true);
+    setError('');
+    try {
+      await switchRole('driver');
+      navigate('/driver', { replace: true });
+    } catch (err) {
+      setError(err.message);
+      setSwitching(false);
+    }
+  }
+
   if (!owner) return null;
+
+  const canSwitchToDriver = state.session?.availableRoles?.includes('driver');
 
   return (
     <Screen>
@@ -46,6 +63,15 @@ export default function OwnerProfileScreen() {
           </div>
         ))}
       </Card>
+
+      {canSwitchToDriver && (
+        <>
+          {error && <EmptyState title={error} />}
+          <Button variant="secondary" onClick={handleSwitchToDriver} disabled={switching}>
+            {switching ? 'Switching…' : 'Switch to Driver view'}
+          </Button>
+        </>
+      )}
 
       <Button variant="danger" onClick={handleLogOut}>
         Log out

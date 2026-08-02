@@ -23,7 +23,8 @@
       "PowerShell(Get-Command psql -ErrorAction SilentlyContinue)",
       "PowerShell(Get-Command docker -ErrorAction SilentlyContinue)",
       "Bash(grep \"stub-whatsapp\" /tmp/backend.log)",
-      "Bash(curl -s -i --max-time 20 https://scholar-transport-backend.onrender.com/api/health)"
+      "Bash(curl -s -i --max-time 20 https://scholar-transport-backend.onrender.com/api/health)",
+      "Bash(netstat -ano)"
     ]
   }
 }
