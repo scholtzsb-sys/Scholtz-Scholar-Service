@@ -61,7 +61,7 @@ export default function LandingScreen() {
             <TextInput
               type="tel"
               inputMode="numeric"
-              placeholder="082 123 4567"
+              placeholder="e.g. 082 123 4567"
               value={phone}
               onChange={(e) => setPhone(formatPhoneDigits(e.target.value))}
               autoFocus
@@ -108,7 +108,7 @@ export default function LandingScreen() {
           <TextInput
             type="tel"
             inputMode="numeric"
-            placeholder="082 123 4567"
+            placeholder="e.g. 082 123 4567"
             value={phone}
             onChange={(e) => setPhone(formatPhoneDigits(e.target.value))}
             autoFocus

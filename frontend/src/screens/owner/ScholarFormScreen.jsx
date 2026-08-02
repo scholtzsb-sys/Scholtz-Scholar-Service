@@ -82,12 +82,9 @@ export default function ScholarFormScreen({ edit }) {
     setContacts((cs) => cs.filter((c) => c.id !== cid));
   }
 
-  const canSubmit =
-    name.trim() && schoolId && homeAddress.trim() && (!addingSchool || newSchoolName.trim()) && !submitting;
-
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (submitting) return;
     setSubmitting(true);
     setError('');
 
@@ -153,7 +150,7 @@ export default function ScholarFormScreen({ edit }) {
         )}
 
         <Field label="Full name">
-          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Scholar's full name" />
+          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Scholar's full name" required />
         </Field>
 
         <Field label="Grade">
@@ -164,6 +161,7 @@ export default function ScholarFormScreen({ edit }) {
           <Field label="School">
             <Select
               value={schoolId}
+              required
               onChange={(e) => {
                 if (e.target.value === '__new__') {
                   setAddingSchool(true);
@@ -187,8 +185,9 @@ export default function ScholarFormScreen({ edit }) {
             <TextInput
               value={newSchoolName}
               onChange={(e) => setNewSchoolName(e.target.value)}
-              placeholder="School name"
+              placeholder="e.g. Oakwood Primary"
               autoFocus
+              required
             />
             <button type="button" className="link-btn" onClick={() => setAddingSchool(false)}>
               Choose existing school instead
@@ -197,7 +196,12 @@ export default function ScholarFormScreen({ edit }) {
         )}
 
         <Field label="Home pickup address">
-          <TextInput value={homeAddress} onChange={(e) => setHomeAddress(e.target.value)} placeholder="Street, suburb, city" />
+          <TextInput
+            value={homeAddress}
+            onChange={(e) => setHomeAddress(e.target.value)}
+            placeholder="e.g. 4 Oak Avenue, Rondebosch, Cape Town"
+            required
+          />
         </Field>
 
         <Field label="Transport plan">
@@ -217,7 +221,7 @@ export default function ScholarFormScreen({ edit }) {
         </Field>
 
         <Field label="Fee per month (R)">
-          <TextInput type="number" min="0" value={feePerMonth} onChange={(e) => setFeePerMonth(e.target.value)} placeholder="850" />
+          <TextInput type="number" min="0" value={feePerMonth} onChange={(e) => setFeePerMonth(e.target.value)} placeholder="e.g. 850" />
         </Field>
 
         <Field label="WhatsApp notifications add-on (R100/month)" hint="Guaranteed delivery. Independent of trip tracking, which always happens.">
@@ -250,7 +254,7 @@ export default function ScholarFormScreen({ edit }) {
               <TextInput value={c.name} onChange={(e) => updateContact(c.id, { name: e.target.value })} />
             </Field>
             <Field label="Phone">
-              <TextInput value={c.phone} onChange={(e) => updateContact(c.id, { phone: e.target.value })} placeholder="082 123 4567" />
+              <TextInput value={c.phone} onChange={(e) => updateContact(c.id, { phone: e.target.value })} placeholder="e.g. 082 123 4567" />
             </Field>
             <Toggle
               checked={c.notify}
@@ -283,7 +287,7 @@ export default function ScholarFormScreen({ edit }) {
         ))}
 
         {error && <EmptyState title={error} />}
-        <Button type="submit" full size="lg" disabled={!canSubmit}>
+        <Button type="submit" full size="lg" disabled={submitting}>
           {submitting ? 'Saving…' : edit ? 'Save changes' : 'Register scholar'}
         </Button>
       </form>

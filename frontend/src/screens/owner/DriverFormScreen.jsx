@@ -27,11 +27,9 @@ export default function DriverFormScreen({ edit }) {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = name.trim() && phone.trim() && vehicleReg.trim() && (edit || password.length > 0) && !submitting;
-
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (submitting) return;
     setSubmitting(true);
     setError('');
     const payload = {
@@ -60,10 +58,10 @@ export default function DriverFormScreen({ edit }) {
       <TopBar title={edit ? 'Edit driver' : 'Register a new driver'} onBack={() => navigate(-1)} />
       <form className="form-section" onSubmit={handleSubmit}>
         <Field label="Name">
-          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Driver's full name" autoFocus />
+          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Driver's full name" autoFocus required />
         </Field>
         <Field label="Phone number">
-          <TextInput value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="082 123 4567" />
+          <TextInput value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 082 123 4567" required />
         </Field>
         <Field label="Password" hint={edit ? 'Leave blank to keep their current password.' : "Share this with them directly — it's what they'll log in with."}>
           <TextInput
@@ -71,10 +69,11 @@ export default function DriverFormScreen({ edit }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder={edit ? 'New password (optional)' : 'Choose a password'}
+            required={!edit}
           />
         </Field>
         <Field label="Vehicle registration">
-          <TextInput value={vehicleReg} onChange={(e) => setVehicleReg(e.target.value)} placeholder="e.g. CA 123-456" />
+          <TextInput value={vehicleReg} onChange={(e) => setVehicleReg(e.target.value)} placeholder="e.g. CA 123-456" required />
         </Field>
 
         <div>
@@ -83,7 +82,7 @@ export default function DriverFormScreen({ edit }) {
         </div>
 
         {error && <EmptyState title={error} />}
-        <Button type="submit" full size="lg" disabled={!canSubmit}>
+        <Button type="submit" full size="lg" disabled={submitting}>
           {submitting ? 'Saving…' : edit ? 'Save changes' : 'Register driver'}
         </Button>
       </form>

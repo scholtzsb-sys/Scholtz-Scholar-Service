@@ -19,8 +19,6 @@ export default function AddOwnerScreen() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = name.trim() && phone.trim() && password.length > 0 && (!alsoDrives || vehicleReg.trim()) && !submitting;
-
   function reset() {
     setName('');
     setPhone('');
@@ -32,7 +30,7 @@ export default function AddOwnerScreen() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (submitting) return;
     setSubmitting(true);
     setError('');
     try {
@@ -83,19 +81,30 @@ export default function AddOwnerScreen() {
       <TopBar title="Add owner" onBack={() => navigate('/owner/profile')} />
       <form className="form-section" onSubmit={handleSubmit}>
         <Field label="Name">
-          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoFocus />
+          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoFocus required />
         </Field>
         <Field label="Phone number">
-          <TextInput value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="082 123 4567" />
+          <TextInput value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 082 123 4567" required />
         </Field>
         <Field label="Password" hint="Share this with them directly — it's what they'll log in with.">
-          <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Choose a password" />
+          <TextInput
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Choose a password"
+            required
+          />
         </Field>
         <Toggle checked={alsoDrives} onChange={setAlsoDrives} label="I also drive" />
         {alsoDrives && (
           <>
             <Field label="Vehicle registration">
-              <TextInput value={vehicleReg} onChange={(e) => setVehicleReg(e.target.value)} placeholder="e.g. CA 123-456" />
+              <TextInput
+                value={vehicleReg}
+                onChange={(e) => setVehicleReg(e.target.value)}
+                placeholder="e.g. CA 123-456"
+                required
+              />
             </Field>
             <div>
               <span className="section-heading">Assigned scholars (pickup order)</span>
@@ -104,7 +113,7 @@ export default function AddOwnerScreen() {
           </>
         )}
         {error && <EmptyState title={error} />}
-        <Button type="submit" full size="lg" disabled={!canSubmit}>
+        <Button type="submit" full size="lg" disabled={submitting}>
           {submitting ? 'Saving…' : 'Save owner'}
         </Button>
       </form>

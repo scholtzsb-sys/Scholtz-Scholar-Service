@@ -22,11 +22,9 @@ export default function FirstOwnerScreen() {
 
   if (!phone) return null;
 
-  const canSubmit = name.trim() && password.length > 0 && !submitting;
-
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (submitting) return;
     setSubmitting(true);
     setError('');
     try {
@@ -46,19 +44,30 @@ export default function FirstOwnerScreen() {
       </p>
       <form className="first-owner-form" onSubmit={handleSubmit}>
         <Field label="Your name">
-          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoFocus />
+          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoFocus required />
         </Field>
         <Field label="Password">
-          <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Choose a password" />
+          <TextInput
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Choose a password"
+            required
+          />
         </Field>
         <Toggle checked={alsoDrives} onChange={setAlsoDrives} label="I also drive" />
         {alsoDrives && (
           <Field label="Vehicle registration">
-            <TextInput value={vehicleReg} onChange={(e) => setVehicleReg(e.target.value)} placeholder="e.g. CA 123-456" />
+            <TextInput
+              value={vehicleReg}
+              onChange={(e) => setVehicleReg(e.target.value)}
+              placeholder="e.g. CA 123-456"
+              required
+            />
           </Field>
         )}
         {error && <EmptyState title={error} />}
-        <Button type="submit" full size="lg" disabled={!canSubmit}>
+        <Button type="submit" full size="lg" disabled={submitting}>
           {submitting ? 'Creating…' : 'Create owner account'}
         </Button>
       </form>
