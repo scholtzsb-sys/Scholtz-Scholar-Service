@@ -21,6 +21,11 @@
  * This separation matters: opting out of the daily "reply to save us
  * money" prompt must never be confused with opting out of safety
  * notifications. Only the explicit notify toggle controls delivery.
+ *
+ * Ported verbatim (CommonJS -> ESM) from the project's original spec file
+ * at the repo root — this is now the real implementation, wired to a
+ * stubbed WhatsApp client (see whatsappClient.js) until real Meta/Twilio
+ * credentials are available.
  */
 
 const SESSION_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -29,7 +34,7 @@ const SESSION_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
  * Returns true if this guardian should receive notifications at all.
  * @param {{ notify: boolean }} guardian
  */
-function isOptedIn(guardian) {
+export function isOptedIn(guardian) {
   return guardian.notify === true;
 }
 
@@ -38,7 +43,7 @@ function isOptedIn(guardian) {
  * session window (they messaged the business within the last 24h).
  * @param {{ lastInboundMessageAt: Date|null }} guardian
  */
-function hasFreeSessionWindow(guardian) {
+export function hasFreeSessionWindow(guardian) {
   if (!guardian.lastInboundMessageAt) return false;
   const elapsed = Date.now() - new Date(guardian.lastInboundMessageAt).getTime();
   return elapsed < SESSION_WINDOW_MS;
@@ -50,16 +55,16 @@ function hasFreeSessionWindow(guardian) {
  * @param {"home_pickup"|"school_dropoff"|"school_pickup"|"home_dropoff"} eventType
  * @param {Date} timestamp
  */
-function buildMessageText(scholar, eventType, timestamp) {
+export function buildMessageText(scholar, eventType, timestamp) {
   const labels = {
-    home_pickup: "picked up from home",
-    school_dropoff: "dropped off at school",
-    school_pickup: "picked up from school",
-    home_dropoff: "dropped off at home",
+    home_pickup: 'picked up from home',
+    school_dropoff: 'dropped off at school',
+    school_pickup: 'picked up from school',
+    home_dropoff: 'dropped off at home',
   };
-  const time = new Date(timestamp).toLocaleTimeString("en-ZA", {
-    hour: "2-digit",
-    minute: "2-digit",
+  const time = new Date(timestamp).toLocaleTimeString('en-ZA', {
+    hour: '2-digit',
+    minute: '2-digit',
   });
   return `${scholar.name} was ${labels[eventType]} at ${time}.`;
 }
@@ -77,7 +82,7 @@ function buildMessageText(scholar, eventType, timestamp) {
  * @param {Array<{ id: string, name: string, phone: string, notify: boolean, lastInboundMessageAt: Date|null }>} guardians
  * @returns {Promise<Array<{ guardianId: string, sent: boolean, channel: string|null, reason: string|null }>>}
  */
-async function sendTripNotification(whatsappClient, scholar, eventType, timestamp, guardians) {
+export async function sendTripNotification(whatsappClient, scholar, eventType, timestamp, guardians) {
   const messageText = buildMessageText(scholar, eventType, timestamp);
   const results = [];
 
@@ -87,7 +92,7 @@ async function sendTripNotification(whatsappClient, scholar, eventType, timestam
         guardianId: guardian.id,
         sent: false,
         channel: null,
-        reason: "guardian has notifications turned off",
+        reason: 'guardian has notifications turned off',
       });
       continue; // hard gate — no message sent, regardless of cost
     }
@@ -98,7 +103,7 @@ async function sendTripNotification(whatsappClient, scholar, eventType, timestam
       if (freeWindow) {
         await whatsappClient.sendSessionMessage(guardian.phone, messageText);
       } else {
-        await whatsappClient.sendTemplateMessage(guardian.phone, "trip_update", {
+        await whatsappClient.sendTemplateMessage(guardian.phone, 'trip_update', {
           scholarName: scholar.name,
           eventText: messageText,
         });
@@ -106,7 +111,7 @@ async function sendTripNotification(whatsappClient, scholar, eventType, timestam
       results.push({
         guardianId: guardian.id,
         sent: true,
-        channel: freeWindow ? "free_session" : "paid_template",
+        channel: freeWindow ? 'free_session' : 'paid_template',
         reason: null,
       });
     } catch (err) {
@@ -123,10 +128,3 @@ async function sendTripNotification(whatsappClient, scholar, eventType, timestam
 
   return results;
 }
-
-module.exports = {
-  isOptedIn,
-  hasFreeSessionWindow,
-  buildMessageText,
-  sendTripNotification,
-};

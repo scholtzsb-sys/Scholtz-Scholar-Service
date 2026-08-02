@@ -14,7 +14,15 @@
       "Bash(\"/c/Program Files/nodejs/npm\" --version)",
       "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); node --version; npm --version)",
       "Bash(rm -f App.css assets/hero.png assets/react.svg assets/vite.svg)",
-      "Bash(rmdir assets *)"
+      "Bash(rmdir assets *)",
+      "Bash(command -v psql)",
+      "Bash(psql --version)",
+      "Bash(command -v docker)",
+      "Bash(docker --version)",
+      "Bash(command -v pg_ctl)",
+      "PowerShell(Get-Command psql -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Command docker -ErrorAction SilentlyContinue)",
+      "Bash(grep \"stub-whatsapp\" /tmp/backend.log)"
     ]
   }
 }

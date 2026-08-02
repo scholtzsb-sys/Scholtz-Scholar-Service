@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GuardianType {
+  PARENT
+  GUARDIAN
+}
+
+enum BillingChannel {
+  WHATSAPP
+  EMAIL
+}
+
+enum TransportPlan {
+  FULL
+  MORNING
+  AFTERNOON
+}
+
+enum TripEventType {
+  HOME_PICKUP
+  SCHOOL_DROPOFF
+  SCHOOL_PICKUP
+  HOME_DROPOFF
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PAID
+}
+
+model Owner {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Set when this owner also drives (the "I also drive" toggle) — the
+  // linked Driver row shares this owner's phone and password.
+  drivers Driver[] @relation("OwnerDrivers")
+}
+
+model Driver {
+  id            String    @id @default(cuid())
+  name          String
+  phone         String    @unique
+  password      String
+  vehicleReg    String
+  active        Boolean   @default(true)
+  deactivatedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  linkedOwnerId String?
+  linkedOwner   Owner?    @relation("OwnerDrivers", fields: [linkedOwnerId], references: [id])
+
+  scholars   Scholar[]
+  tripEvents TripEvent[]
+}
+
+model School {
+  id   String @id @default(cuid())
+  name String
+
+  scholars Scholar[]
+}
+
+// A contact's identity/billing record — shared across siblings so invoice
+// bundling and the WhatsApp free-session window (lastInboundMessageAt) work
+// correctly. The per-scholar notify toggle lives on GuardianLink instead,
+// since the same contact can want updates for one child and not another.
+model Guardian {
+  id                   String          @id @default(cuid())
+  name                 String
+  phone                String
+  type                 GuardianType
+  isBillingContact     Boolean         @default(false)
+  billingChannel       BillingChannel?
+  email                String?
+  lastInboundMessageAt DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  guardianLinks GuardianLink[]
+  invoices      Invoice[]
+}
+
+model Scholar {
+  id            String        @id @default(cuid())
+  name          String
+  grade         String?
+  homeAddress   String
+  photo         String?
+  transportPlan TransportPlan
+  // Fixed color-rotation index assigned at registration time — never
+  // recalculated, so it doesn't shift if a sibling is later deactivated.
+  colorIndex    Int           @default(0)
+  pickupOrder   Int?
+  feePerMonth   Int           @default(0)
+  notifyAddon   Boolean       @default(false)
+  active        Boolean       @default(true)
+  deactivatedAt DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  schoolId String
+  school   School  @relation(fields: [schoolId], references: [id])
+  driverId String?
+  driver   Driver? @relation(fields: [driverId], references: [id])
+
+  guardianLinks    GuardianLink[]
+  tripEvents       TripEvent[]
+  invoiceLineItems InvoiceLineItem[]
+}
+
+model GuardianLink {
+  id         String  @id @default(cuid())
+  notify     Boolean @default(true)
+  scholarId  String
+  scholar    Scholar  @relation(fields: [scholarId], references: [id], onDelete: Cascade)
+  guardianId String
+  guardian   Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+
+  @@unique([scholarId, guardianId])
+}
+
+model TripEvent {
+  id        String        @id @default(cuid())
+  eventType TripEventType
+  timestamp DateTime      @default(now())
+
+  scholarId String
+  scholar   Scholar @relation(fields: [scholarId], references: [id], onDelete: Cascade)
+  driverId  String?
+  driver    Driver? @relation(fields: [driverId], references: [id])
+}
+
+model Invoice {
+  id                     String        @id @default(cuid())
+  invoiceNumber          String        @unique
+  month                  String
+  issuedDate             DateTime
+  dueDate                DateTime
+  subtotal               Int
+  total                  Int
+  status                 InvoiceStatus @default(UNPAID)
+  proofOfPaymentFilename String?
+  paidAt                 DateTime?
+  createdAt              DateTime      @default(now())
+
+  billingGuardianId String
+  billingGuardian   Guardian @relation(fields: [billingGuardianId], references: [id])
+
+  lineItems InvoiceLineItem[]
+}
+
+// Line items snapshot scholar name/school/plan at invoice-generation time so
+// past invoices stay accurate even if the scholar is later edited or
+// permanently deleted (scholarId goes null, the snapshot fields remain).
+model InvoiceLineItem {
+  id            String  @id @default(cuid())
+  scholarName   String
+  school        String
+  transportPlan String
+  amount        Int
+  notifyAddon   Boolean @default(false)
+  addonAmount   Int     @default(0)
+
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  scholarId String?
+  scholar   Scholar? @relation(fields: [scholarId], references: [id], onDelete: SetNull)
+}
