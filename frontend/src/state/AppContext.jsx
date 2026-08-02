@@ -24,7 +24,6 @@ const initialState = {
   nextRegistrationIndex: initialScholars.length,
   notificationLog: [],
   session: null, // { role: 'owner' | 'driver', ownerId?, driverId?, phone }
-  pendingAuth: null, // { phone }
 };
 
 function uid(prefix) {
@@ -33,17 +32,7 @@ function uid(prefix) {
 
 function reducer(state, action) {
   switch (action.type) {
-    case 'REQUEST_OTP':
-      return { ...state, pendingAuth: { phone: action.phone } };
-
-    case 'CANCEL_AUTH':
-      return { ...state, pendingAuth: null };
-
     case 'START_SESSION':
-      // Deliberately leaves pendingAuth as-is: OtpScreen reads phone from it
-      // and is still mounted for one more render as navigation away happens,
-      // so clearing it here would trigger its "no pending phone" redirect
-      // and stomp the real navigation to /owner or /driver.
       return { ...state, session: action.session };
 
     case 'LOG_OUT':
@@ -61,6 +50,7 @@ function reducer(state, action) {
               id: uid('driver'),
               name: owner.name,
               phone: owner.phone,
+              password: owner.password,
               vehicleReg: action.owner.vehicleReg || '',
               linkedOwnerId: owner.id,
               active: true,
@@ -258,8 +248,6 @@ export function useAppActions() {
   const { dispatch } = useApp();
   return useMemo(
     () => ({
-      requestOtp: (phone) => dispatch({ type: 'REQUEST_OTP', phone }),
-      cancelAuth: () => dispatch({ type: 'CANCEL_AUTH' }),
       startSession: (session) => dispatch({ type: 'START_SESSION', session }),
       logOut: () => dispatch({ type: 'LOG_OUT' }),
       addSchool: (name) => {
@@ -303,13 +291,21 @@ export function useAppActions() {
   );
 }
 
-export function findRolesForPhone(state, phone) {
-  const owner = state.owners.find((o) => o.phone === phone);
-  const driver = state.drivers.find((d) => d.phone === phone && d.active);
+// Matches phone+password against both owner and driver records — a phone
+// held by the same person in both roles shares one password (see ADD_OWNER),
+// so a correct login can resolve to one or two roles at once.
+export function findRolesForCredentials(state, phone, password) {
+  const owner = state.owners.find((o) => o.phone === phone && o.password === password);
+  const driver = state.drivers.find((d) => d.phone === phone && d.password === password && d.active);
   const roles = [];
   if (owner) roles.push({ role: 'owner', ownerId: owner.id, label: `Owner — ${owner.name}` });
   if (driver) roles.push({ role: 'driver', driverId: driver.id, label: `Driver — ${driver.name}` });
   return roles;
+}
+
+// Used to distinguish "wrong password" from "no such account" for the login error message.
+export function phoneHasAnyAccount(state, phone) {
+  return state.owners.some((o) => o.phone === phone) || state.drivers.some((d) => d.phone === phone && d.active);
 }
 
 export { TRANSPORT_PLANS };

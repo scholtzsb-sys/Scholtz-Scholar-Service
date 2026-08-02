@@ -3,7 +3,6 @@ import { AppProvider } from './state/AppContext';
 import RequireRole from './state/RequireRole';
 
 import LandingScreen from './screens/auth/LandingScreen';
-import OtpScreen from './screens/auth/OtpScreen';
 import ContinueAsScreen from './screens/auth/ContinueAsScreen';
 import FirstOwnerScreen from './screens/auth/FirstOwnerScreen';
 import './screens/auth/auth.css';
@@ -30,7 +29,6 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingScreen />} />
-          <Route path="/otp" element={<OtpScreen />} />
           <Route path="/continue-as" element={<ContinueAsScreen />} />
           <Route path="/first-owner" element={<FirstOwnerScreen />} />
 

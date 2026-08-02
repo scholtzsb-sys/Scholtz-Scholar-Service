@@ -39,8 +39,12 @@ export const STAGE_ACTION_LABELS = {
   home_dropoff: 'Dropped at home',
 };
 
+// Demo seed accounts all use the same password so the mock is easy to log
+// into: demo1234
+export const DEMO_PASSWORD = 'demo1234';
+
 export const initialOwners = [
-  { id: 'owner-1', name: 'Elias Scholtz', phone: '0835550142' },
+  { id: 'owner-1', name: 'Elias Scholtz', phone: '0835550142', password: DEMO_PASSWORD },
 ];
 
 export const initialSchools = [
@@ -53,6 +57,7 @@ export const initialDrivers = [
     id: 'driver-1',
     name: 'Elias Scholtz',
     phone: '0835550142',
+    password: DEMO_PASSWORD,
     vehicleReg: 'CA 123-456',
     linkedOwnerId: 'owner-1',
     active: true,
@@ -62,6 +67,7 @@ export const initialDrivers = [
     id: 'driver-2',
     name: 'Nomvula Khumalo',
     phone: '0821112233',
+    password: DEMO_PASSWORD,
     vehicleReg: 'CA 987-654',
     linkedOwnerId: null,
     active: true,

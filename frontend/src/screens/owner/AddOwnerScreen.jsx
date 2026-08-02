@@ -11,16 +11,18 @@ export default function AddOwnerScreen() {
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [alsoDrives, setAlsoDrives] = useState(false);
   const [vehicleReg, setVehicleReg] = useState('');
   const [assignedIds, setAssignedIds] = useState([]);
   const [savedName, setSavedName] = useState(null);
 
-  const canSubmit = name.trim() && phone.trim() && (!alsoDrives || vehicleReg.trim());
+  const canSubmit = name.trim() && phone.trim() && password.length > 0 && (!alsoDrives || vehicleReg.trim());
 
   function reset() {
     setName('');
     setPhone('');
+    setPassword('');
     setAlsoDrives(false);
     setVehicleReg('');
     setAssignedIds([]);
@@ -29,9 +31,12 @@ export default function AddOwnerScreen() {
   function handleSubmit(e) {
     e.preventDefault();
     if (!canSubmit) return;
-    addOwner({ name: name.trim(), phone: phone.trim(), alsoDrives: false });
+    addOwner({ name: name.trim(), phone: phone.trim(), password, alsoDrives: false });
     if (alsoDrives) {
-      addDriver({ name: name.trim(), phone: phone.trim(), vehicleReg: vehicleReg.trim(), linkedOwnerId: null }, assignedIds);
+      addDriver(
+        { name: name.trim(), phone: phone.trim(), password, vehicleReg: vehicleReg.trim(), linkedOwnerId: null },
+        assignedIds
+      );
     }
     setSavedName(name.trim());
   }
@@ -71,6 +76,9 @@ export default function AddOwnerScreen() {
         </Field>
         <Field label="Phone number">
           <TextInput value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="082 123 4567" />
+        </Field>
+        <Field label="Password" hint="Share this with them directly — it's what they'll log in with.">
+          <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Choose a password" />
         </Field>
         <Toggle checked={alsoDrives} onChange={setAlsoDrives} label="I also drive" />
         {alsoDrives && (

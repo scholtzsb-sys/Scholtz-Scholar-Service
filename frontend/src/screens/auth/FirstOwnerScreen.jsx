@@ -10,6 +10,7 @@ export default function FirstOwnerScreen() {
   const phone = location.state?.phone;
 
   const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
   const [alsoDrives, setAlsoDrives] = useState(false);
   const [vehicleReg, setVehicleReg] = useState('');
 
@@ -19,10 +20,12 @@ export default function FirstOwnerScreen() {
 
   if (!phone) return null;
 
+  const canSubmit = name.trim() && password.length > 0;
+
   function handleSubmit(e) {
     e.preventDefault();
-    if (!name.trim()) return;
-    const owner = { name: name.trim(), phone, alsoDrives, vehicleReg: alsoDrives ? vehicleReg.trim() : '' };
+    if (!canSubmit) return;
+    const owner = { name: name.trim(), phone, password, alsoDrives, vehicleReg: alsoDrives ? vehicleReg.trim() : '' };
     const ownerId = addOwner(owner);
     startSession({ role: 'owner', ownerId, phone });
     navigate('/owner', { replace: true, state: { justBootstrapped: true } });
@@ -32,11 +35,14 @@ export default function FirstOwnerScreen() {
     <Screen maxWidth={420}>
       <TopBar title="Welcome — let's set you up" />
       <p className="first-owner-intro">
-        Your number <strong>{phone}</strong> is verified. No owner account exists yet — you'll be the first.
+        No owner account exists yet for <strong>{phone}</strong> — you'll be the first. Set a password to log in with next time.
       </p>
       <form className="first-owner-form" onSubmit={handleSubmit}>
         <Field label="Your name">
           <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" autoFocus />
+        </Field>
+        <Field label="Password">
+          <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Choose a password" />
         </Field>
         <Toggle checked={alsoDrives} onChange={setAlsoDrives} label="I also drive" />
         {alsoDrives && (
@@ -44,7 +50,7 @@ export default function FirstOwnerScreen() {
             <TextInput value={vehicleReg} onChange={(e) => setVehicleReg(e.target.value)} placeholder="e.g. CA 123-456" />
           </Field>
         )}
-        <Button type="submit" full size="lg" disabled={!name.trim()}>
+        <Button type="submit" full size="lg" disabled={!canSubmit}>
           Create owner account
         </Button>
       </form>

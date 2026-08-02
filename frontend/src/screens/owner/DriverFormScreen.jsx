@@ -21,15 +21,17 @@ export default function DriverFormScreen({ edit }) {
 
   const [name, setName] = useState(existing?.name ?? '');
   const [phone, setPhone] = useState(existing?.phone ?? '');
+  const [password, setPassword] = useState('');
   const [vehicleReg, setVehicleReg] = useState(existing?.vehicleReg ?? '');
   const [assignedIds, setAssignedIds] = useState(existingAssigned);
 
-  const canSubmit = name.trim() && phone.trim() && vehicleReg.trim();
+  const canSubmit = name.trim() && phone.trim() && vehicleReg.trim() && (edit || password.length > 0);
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!canSubmit) return;
     const payload = { name: name.trim(), phone: phone.trim(), vehicleReg: vehicleReg.trim() };
+    if (password.length > 0) payload.password = password;
     if (edit && existing) {
       updateDriver(existing.id, payload, assignedIds);
       navigate(`/owner/drivers/${existing.id}`);
@@ -48,6 +50,14 @@ export default function DriverFormScreen({ edit }) {
         </Field>
         <Field label="Phone number">
           <TextInput value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="082 123 4567" />
+        </Field>
+        <Field label="Password" hint={edit ? 'Leave blank to keep their current password.' : "Share this with them directly — it's what they'll log in with."}>
+          <TextInput
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={edit ? 'New password (optional)' : 'Choose a password'}
+          />
         </Field>
         <Field label="Vehicle registration">
           <TextInput value={vehicleReg} onChange={(e) => setVehicleReg(e.target.value)} placeholder="e.g. CA 123-456" />
