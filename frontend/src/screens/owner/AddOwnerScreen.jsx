@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Screen, TopBar, Card, Button, Field, TextInput, Toggle } from '../../components/ui/Primitives';
+import { Screen, TopBar, Card, Button, Field, TextInput, Toggle, EmptyState } from '../../components/ui/Primitives';
 import ScholarAssignmentPicker from '../../components/ScholarAssignmentPicker';
 import { useAppActions } from '../../state/AppContext';
 import './owner.css';
 
 export default function AddOwnerScreen() {
   const navigate = useNavigate();
-  const { addOwner, addDriver } = useAppActions();
+  const { addOwner } = useAppActions();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -16,8 +16,10 @@ export default function AddOwnerScreen() {
   const [vehicleReg, setVehicleReg] = useState('');
   const [assignedIds, setAssignedIds] = useState([]);
   const [savedName, setSavedName] = useState(null);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = name.trim() && phone.trim() && password.length > 0 && (!alsoDrives || vehicleReg.trim());
+  const canSubmit = name.trim() && phone.trim() && password.length > 0 && (!alsoDrives || vehicleReg.trim()) && !submitting;
 
   function reset() {
     setName('');
@@ -28,17 +30,26 @@ export default function AddOwnerScreen() {
     setAssignedIds([]);
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!canSubmit) return;
-    addOwner({ name: name.trim(), phone: phone.trim(), password, alsoDrives: false });
-    if (alsoDrives) {
-      addDriver(
-        { name: name.trim(), phone: phone.trim(), password, vehicleReg: vehicleReg.trim(), linkedOwnerId: null },
-        assignedIds
-      );
+    setSubmitting(true);
+    setError('');
+    try {
+      await addOwner({
+        name: name.trim(),
+        phone: phone.trim(),
+        password,
+        alsoDrives,
+        vehicleReg: alsoDrives ? vehicleReg.trim() : '',
+        assignedScholarIds: alsoDrives ? assignedIds : [],
+      });
+      setSavedName(name.trim());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
     }
-    setSavedName(name.trim());
   }
 
   if (savedName) {
@@ -92,8 +103,9 @@ export default function AddOwnerScreen() {
             </div>
           </>
         )}
+        {error && <EmptyState title={error} />}
         <Button type="submit" full size="lg" disabled={!canSubmit}>
-          Save owner
+          {submitting ? 'Saving…' : 'Save owner'}
         </Button>
       </form>
     </Screen>

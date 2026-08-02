@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Screen, TopBar, Card, Button, Badge, Toggle } from '../../components/ui/Primitives';
-import { useApp, useAppActions } from '../../state/AppContext';
+import { Screen, TopBar, Card, Button, Badge, Toggle, EmptyState } from '../../components/ui/Primitives';
+import { useAppActions } from '../../state/AppContext';
+import { api } from '../../lib/api';
 import InvoicePdfPreview from '../../components/InvoicePdfPreview';
 import './owner.css';
 import './invoicing.css';
@@ -9,24 +10,53 @@ import './invoicing.css';
 export default function InvoiceDetailScreen() {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
-  const { state } = useApp();
   const { markInvoicePaid, attachProofOfPayment } = useAppActions();
   const [showPdf, setShowPdf] = useState(false);
+  const [invoice, setInvoice] = useState(null); // null while loading
+  const [error, setError] = useState('');
 
-  const invoice = state.invoices.find((i) => i.id === invoiceId);
-  const billing = invoice ? state.guardians.find((g) => g.id === invoice.billingGuardianId) : null;
+  function refetch() {
+    return api
+      .getInvoice(invoiceId)
+      .then(setInvoice)
+      .catch((err) => setError(err.message));
+  }
 
-  if (!invoice) {
+  useEffect(() => {
+    refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoiceId]);
+
+  if (error) {
     return (
       <Screen>
-        <TopBar title="Invoice not found" onBack={() => navigate('/owner/scholars')} />
+        <TopBar title="Invoice" onBack={() => navigate(-1)} />
+        <EmptyState title={error} />
       </Screen>
     );
   }
 
-  function handleProofChange(e) {
+  if (!invoice) {
+    return (
+      <Screen>
+        <TopBar title="Invoice" onBack={() => navigate(-1)} />
+        <EmptyState title="Loading…" />
+      </Screen>
+    );
+  }
+
+  const billing = invoice.billingGuardian;
+
+  async function handleProofChange(e) {
     const file = e.target.files?.[0];
-    if (file) attachProofOfPayment(invoice.id, { filename: file.name });
+    if (!file) return;
+    await attachProofOfPayment(invoice.id, file.name);
+    refetch();
+  }
+
+  async function handleTogglePaid(v) {
+    await markInvoicePaid(invoice.id, v);
+    refetch();
   }
 
   return (
@@ -36,7 +66,7 @@ export default function InvoiceDetailScreen() {
       <Card>
         <div className="guardian-card-top">
           <strong>{invoice.month}</strong>
-          <Badge tone={invoice.status === 'paid' ? 'success' : 'warning'}>{invoice.status === 'paid' ? 'Paid' : 'Unpaid'}</Badge>
+          <Badge tone={invoice.status === 'PAID' ? 'success' : 'warning'}>{invoice.status === 'PAID' ? 'Paid' : 'Unpaid'}</Badge>
         </div>
         <p className="assignment-meta">Billed to {billing?.name}</p>
       </Card>
@@ -44,7 +74,7 @@ export default function InvoiceDetailScreen() {
       <Card className="form-section">
         <span className="section-heading">Scholars &amp; amounts</span>
         {invoice.lineItems.map((li) => (
-          <div key={li.scholarId} className="invoice-history-row" style={{ padding: 0, cursor: 'default' }}>
+          <div key={li.id} className="invoice-history-row" style={{ padding: 0, cursor: 'default' }}>
             <span>{li.scholarName}</span>
             <span>
               R{li.amount.toFixed(2)}
@@ -66,24 +96,20 @@ export default function InvoiceDetailScreen() {
 
       <Card className="form-section">
         <span className="section-heading">Proof of payment</span>
-        {invoice.proofOfPayment ? (
-          <p style={{ margin: 0 }}>📎 {invoice.proofOfPayment.filename}</p>
+        {invoice.proofOfPaymentFilename ? (
+          <p style={{ margin: 0 }}>📎 {invoice.proofOfPaymentFilename}</p>
         ) : (
           <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>None attached yet.</p>
         )}
         <label className="link-btn" style={{ cursor: 'pointer' }}>
-          {invoice.proofOfPayment ? 'Replace attachment' : 'Attach a screenshot'}
+          {invoice.proofOfPaymentFilename ? 'Replace attachment' : 'Attach a screenshot'}
           <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleProofChange} />
         </label>
       </Card>
 
       <Card>
-        <Toggle
-          checked={invoice.status === 'paid'}
-          onChange={(v) => markInvoicePaid(invoice.id, v)}
-          label="Mark as paid"
-        />
-        {invoice.status === 'paid' && (
+        <Toggle checked={invoice.status === 'PAID'} onChange={handleTogglePaid} label="Mark as paid" />
+        {invoice.status === 'PAID' && (
           <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
             Marking paid sent a "payment received" WhatsApp confirmation to {billing?.name}.
           </p>

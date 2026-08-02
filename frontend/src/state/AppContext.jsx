@@ -1,232 +1,73 @@
-import { createContext, useContext, useMemo, useReducer } from 'react';
-import {
-  initialDrivers,
-  initialGuardians,
-  initialInvoices,
-  initialOwners,
-  initialSchools,
-  initialScholars,
-  initialTripEvents,
-  TRANSPORT_PLANS,
-} from '../lib/mockData';
-import { hasFreeSessionWindow } from '../lib/selectors';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
+import { api } from '../lib/api';
+import { getToken, setToken, clearToken } from '../lib/tokenStorage';
+import { TRANSPORT_PLANS } from '../lib/mockData';
 
 const AppStateContext = createContext(null);
 
 const initialState = {
-  owners: initialOwners,
-  drivers: initialDrivers,
-  guardians: initialGuardians,
-  scholars: initialScholars,
-  schools: initialSchools,
-  tripEvents: initialTripEvents,
-  invoices: initialInvoices,
-  nextRegistrationIndex: initialScholars.length,
-  notificationLog: [],
-  session: null, // { role: 'owner' | 'driver', ownerId?, driverId?, phone }
+  session: null, // { role: 'owner' | 'driver', ownerId?, driverId?, phone, name }
+  authLoading: true, // restoring a stored token on first mount
+  dataLoading: false,
+  owners: [],
+  drivers: [],
+  guardians: [],
+  scholars: [],
+  schools: [],
+  tripEvents: [],
 };
 
-function uid(prefix) {
-  return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+// The backend uses Prisma enums (FULL, HOME_PICKUP, WHATSAPP, ...); the
+// screens and selectors were built against the mock's lowercase strings.
+// Normalizing here means only this file needs to know about that mismatch.
+function normalizeGuardian(g) {
+  return {
+    ...g,
+    type: g.type?.toLowerCase(),
+    billingChannel: g.billingChannel ? g.billingChannel.toLowerCase() : null,
+  };
+}
+
+function normalizeScholar(s) {
+  return {
+    ...s,
+    transportPlan: s.transportPlan?.toLowerCase(),
+    guardianLinks: (s.guardianLinks || []).map((l) => ({ guardianId: l.guardianId, notify: l.notify })),
+  };
+}
+
+function normalizeTripEvent(e) {
+  return { ...e, eventType: e.eventType?.toLowerCase() };
+}
+
+const COLLECTION_FETCHERS = {
+  schools: () => api.listSchools(),
+  guardians: () => api.listGuardians().then((rows) => rows.map(normalizeGuardian)),
+  drivers: () => api.listDrivers(),
+  scholars: () => api.listScholars().then((rows) => rows.map(normalizeScholar)),
+  owners: () => api.listOwners(),
+  tripEvents: () => api.listTripEvents({ today: true }).then((rows) => rows.map(normalizeTripEvent)),
+};
+
+async function fetchCollections(which) {
+  const entries = await Promise.all(which.map(async (key) => [key, await COLLECTION_FETCHERS[key]()]));
+  return Object.fromEntries(entries);
 }
 
 function reducer(state, action) {
   switch (action.type) {
-    case 'START_SESSION':
+    case 'SET_AUTH_LOADING':
+      return { ...state, authLoading: action.value };
+    case 'SET_DATA_LOADING':
+      return { ...state, dataLoading: action.value };
+    case 'SET_SESSION':
       return { ...state, session: action.session };
-
-    case 'LOG_OUT':
-      return { ...state, session: null };
-
-    case 'ADD_SCHOOL':
-      return { ...state, schools: [...state.schools, action.school] };
-
-    case 'ADD_OWNER': {
-      const owner = { id: action.owner.id ?? uid('owner'), ...action.owner };
-      const drivers = action.owner.alsoDrives
-        ? [
-            ...state.drivers,
-            {
-              id: uid('driver'),
-              name: owner.name,
-              phone: owner.phone,
-              password: owner.password,
-              vehicleReg: action.owner.vehicleReg || '',
-              linkedOwnerId: owner.id,
-              active: true,
-              deactivatedAt: null,
-            },
-          ]
-        : state.drivers;
-      return { ...state, owners: [...state.owners, owner], drivers };
-    }
-
-    case 'ADD_SCHOLAR': {
-      const scholar = {
-        id: action.scholar.id ?? uid('scholar'),
-        colorIndex: state.nextRegistrationIndex,
-        active: true,
-        deactivatedAt: null,
-        ...action.scholar,
-      };
-      const newGuardians = action.newGuardians || [];
-      return {
-        ...state,
-        scholars: [...state.scholars, scholar],
-        guardians: [...state.guardians, ...newGuardians],
-        nextRegistrationIndex: state.nextRegistrationIndex + 1,
-      };
-    }
-
-    case 'UPDATE_SCHOLAR': {
-      return {
-        ...state,
-        scholars: state.scholars.map((s) => (s.id === action.scholarId ? { ...s, ...action.patch } : s)),
-        guardians:
-          action.upsertGuardians?.reduce((acc, g) => {
-            const exists = acc.some((existing) => existing.id === g.id);
-            return exists ? acc.map((existing) => (existing.id === g.id ? { ...existing, ...g } : existing)) : [...acc, g];
-          }, state.guardians) ?? state.guardians,
-      };
-    }
-
-    case 'DEACTIVATE_SCHOLAR':
-      return {
-        ...state,
-        scholars: state.scholars.map((s) =>
-          s.id === action.scholarId ? { ...s, active: false, deactivatedAt: new Date().toISOString() } : s
-        ),
-      };
-
-    case 'REACTIVATE_SCHOLAR':
-      return {
-        ...state,
-        scholars: state.scholars.map((s) => (s.id === action.scholarId ? { ...s, active: true, deactivatedAt: null } : s)),
-      };
-
-    case 'DELETE_SCHOLAR':
-      return { ...state, scholars: state.scholars.filter((s) => s.id !== action.scholarId) };
-
-    case 'ADD_DRIVER': {
-      const driver = { id: action.driver.id ?? uid('driver'), active: true, deactivatedAt: null, ...action.driver };
-      const scholars = state.scholars.map((s) => (action.assignedScholarIds.includes(s.id) ? { ...s, driverId: driver.id } : s));
-      // apply pickup order
-      const withOrder = scholars.map((s) => {
-        const idx = action.assignedScholarIds.indexOf(s.id);
-        return idx >= 0 ? { ...s, pickupOrder: idx + 1 } : s;
-      });
-      return { ...state, drivers: [...state.drivers, driver], scholars: withOrder };
-    }
-
-    case 'UPDATE_DRIVER': {
-      const scholars = state.scholars.map((s) => {
-        if (action.assignedScholarIds && action.assignedScholarIds.includes(s.id)) {
-          return { ...s, driverId: action.driverId, pickupOrder: action.assignedScholarIds.indexOf(s.id) + 1 };
-        }
-        if (s.driverId === action.driverId && action.assignedScholarIds && !action.assignedScholarIds.includes(s.id)) {
-          return { ...s, driverId: null };
-        }
-        return s;
-      });
-      return {
-        ...state,
-        drivers: state.drivers.map((d) => (d.id === action.driverId ? { ...d, ...action.patch } : d)),
-        scholars,
-      };
-    }
-
-    case 'DEACTIVATE_DRIVER':
-      return {
-        ...state,
-        drivers: state.drivers.map((d) =>
-          d.id === action.driverId ? { ...d, active: false, deactivatedAt: new Date().toISOString() } : d
-        ),
-      };
-
-    case 'REACTIVATE_DRIVER':
-      return {
-        ...state,
-        drivers: state.drivers.map((d) => (d.id === action.driverId ? { ...d, active: true, deactivatedAt: null } : d)),
-      };
-
-    case 'DELETE_DRIVER':
-      return { ...state, drivers: state.drivers.filter((d) => d.id !== action.driverId) };
-
-    case 'LOG_TRIP_EVENT': {
-      const event = {
-        id: uid('trip'),
-        scholarId: action.scholarId,
-        eventType: action.eventType,
-        timestamp: new Date(),
-      };
-      const scholar = state.scholars.find((s) => s.id === action.scholarId);
-      const links = scholar?.guardianLinks ?? [];
-      const notifications = links.map((link) => {
-        const contact = state.guardians.find((g) => g.id === link.guardianId);
-        return {
-          id: uid('notif'),
-          guardianId: link.guardianId,
-          guardianName: contact?.name,
-          scholarName: scholar?.name,
-          eventType: action.eventType,
-          sent: link.notify,
-          channel: link.notify ? (hasFreeSessionWindow(contact) ? 'free_session' : 'paid_template') : null,
-          reason: link.notify ? null : 'guardian has notifications turned off',
-          timestamp: event.timestamp,
-        };
-      });
-      return {
-        ...state,
-        tripEvents: [...state.tripEvents, event],
-        notificationLog: [...notifications, ...state.notificationLog],
-      };
-    }
-
-    case 'GENERATE_INVOICE': {
-      const invoice = { id: uid('invoice'), status: 'unpaid', proofOfPayment: null, paidAt: null, ...action.invoice };
-      return { ...state, invoices: [...state.invoices, invoice] };
-    }
-
-    case 'MARK_INVOICE_PAID': {
-      const willBePaid = action.paid;
-      const invoice = state.invoices.find((i) => i.id === action.invoiceId);
-      if (willBePaid && invoice && invoice.status !== 'paid') {
-        const guardian = state.guardians.find((g) => g.id === invoice.billingGuardianId);
-        const notif = guardian
-          ? [
-              {
-                id: uid('notif'),
-                guardianId: guardian.id,
-                guardianName: guardian.name,
-                scholarName: null,
-                eventType: 'payment_received',
-                sent: true,
-                channel: 'paid_template',
-                reason: null,
-                timestamp: new Date(),
-              },
-            ]
-          : [];
-        return {
-          ...state,
-          invoices: state.invoices.map((i) =>
-            i.id === action.invoiceId ? { ...i, status: 'paid', paidAt: new Date().toISOString() } : i
-          ),
-          notificationLog: [...notif, ...state.notificationLog],
-        };
-      }
-      return {
-        ...state,
-        invoices: state.invoices.map((i) => (i.id === action.invoiceId ? { ...i, status: willBePaid ? 'paid' : 'unpaid', paidAt: willBePaid ? new Date().toISOString() : null } : i)),
-      };
-    }
-
-    case 'ATTACH_PROOF_OF_PAYMENT':
-      return {
-        ...state,
-        invoices: state.invoices.map((i) => (i.id === action.invoiceId ? { ...i, proofOfPayment: action.proof } : i)),
-      };
-
+    case 'SET_COLLECTIONS':
+      return { ...state, ...action.collections };
+    case 'APPEND_TRIP_EVENT':
+      return { ...state, tripEvents: [...state.tripEvents, action.event] };
+    case 'RESET':
+      return { ...initialState, authLoading: false };
     default:
       return state;
   }
@@ -234,6 +75,28 @@ function reducer(state, action) {
 
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+
+  useEffect(() => {
+    async function restore() {
+      const token = getToken();
+      if (!token) {
+        dispatch({ type: 'SET_AUTH_LOADING', value: false });
+        return;
+      }
+      try {
+        const { session } = await api.me();
+        dispatch({ type: 'SET_SESSION', session });
+        const collections = await fetchCollections(['schools', 'guardians', 'drivers', 'scholars', 'owners', 'tripEvents']);
+        dispatch({ type: 'SET_COLLECTIONS', collections });
+      } catch {
+        clearToken();
+      } finally {
+        dispatch({ type: 'SET_AUTH_LOADING', value: false });
+      }
+    }
+    restore();
+  }, []);
+
   const value = useMemo(() => ({ state, dispatch }), [state]);
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 }
@@ -246,66 +109,204 @@ export function useApp() {
 
 export function useAppActions() {
   const { dispatch } = useApp();
-  return useMemo(
-    () => ({
-      startSession: (session) => dispatch({ type: 'START_SESSION', session }),
-      logOut: () => dispatch({ type: 'LOG_OUT' }),
-      addSchool: (name) => {
-        const id = uid('school');
-        dispatch({ type: 'ADD_SCHOOL', school: { id, name } });
-        return id;
-      },
-      addOwner: (owner) => {
-        const id = uid('owner');
-        dispatch({ type: 'ADD_OWNER', owner: { ...owner, id } });
-        return id;
-      },
-      addScholar: (scholar, newGuardians) => {
-        const id = uid('scholar');
-        dispatch({ type: 'ADD_SCHOLAR', scholar: { ...scholar, id }, newGuardians });
-        return id;
-      },
-      updateScholar: (scholarId, patch, upsertGuardians) => dispatch({ type: 'UPDATE_SCHOLAR', scholarId, patch, upsertGuardians }),
-      deactivateScholar: (scholarId) => dispatch({ type: 'DEACTIVATE_SCHOLAR', scholarId }),
-      reactivateScholar: (scholarId) => dispatch({ type: 'REACTIVATE_SCHOLAR', scholarId }),
-      deleteScholar: (scholarId) => dispatch({ type: 'DELETE_SCHOLAR', scholarId }),
-      addDriver: (driver, assignedScholarIds) => {
-        const id = uid('driver');
-        dispatch({ type: 'ADD_DRIVER', driver: { ...driver, id }, assignedScholarIds });
-        return id;
-      },
-      updateDriver: (driverId, patch, assignedScholarIds) => dispatch({ type: 'UPDATE_DRIVER', driverId, patch, assignedScholarIds }),
-      deactivateDriver: (driverId) => dispatch({ type: 'DEACTIVATE_DRIVER', driverId }),
-      reactivateDriver: (driverId) => dispatch({ type: 'REACTIVATE_DRIVER', driverId }),
-      deleteDriver: (driverId) => dispatch({ type: 'DELETE_DRIVER', driverId }),
-      logTripEvent: (scholarId, eventType) => dispatch({ type: 'LOG_TRIP_EVENT', scholarId, eventType }),
-      generateInvoice: (invoice) => {
-        const id = uid('invoice');
-        dispatch({ type: 'GENERATE_INVOICE', invoice: { ...invoice, id } });
-        return id;
-      },
-      markInvoicePaid: (invoiceId, paid) => dispatch({ type: 'MARK_INVOICE_PAID', invoiceId, paid }),
-      attachProofOfPayment: (invoiceId, proof) => dispatch({ type: 'ATTACH_PROOF_OF_PAYMENT', invoiceId, proof }),
-    }),
+
+  const loadCoreData = useCallback(async () => {
+    dispatch({ type: 'SET_DATA_LOADING', value: true });
+    const collections = await fetchCollections(['schools', 'guardians', 'drivers', 'scholars', 'owners', 'tripEvents']);
+    dispatch({ type: 'SET_COLLECTIONS', collections });
+    dispatch({ type: 'SET_DATA_LOADING', value: false });
+  }, [dispatch]);
+
+  // Resolves to { roles } when the phone+password holds more than one role
+  // (caller should route to the Continue-as screen), or { session } once a
+  // token has been issued and core data loaded.
+  const login = useCallback(
+    async (phone, password, role) => {
+      const result = await api.login({ phone, password, role });
+      if (result.roles) return { roles: result.roles };
+      setToken(result.token);
+      dispatch({ type: 'SET_SESSION', session: result.session });
+      await loadCoreData();
+      return { session: result.session };
+    },
+    [dispatch, loadCoreData]
+  );
+
+  const firstOwner = useCallback(
+    async (payload) => {
+      const result = await api.firstOwner(payload);
+      setToken(result.token);
+      dispatch({ type: 'SET_SESSION', session: result.session });
+      await loadCoreData();
+      return result.session;
+    },
+    [dispatch, loadCoreData]
+  );
+
+  const logOut = useCallback(() => {
+    clearToken();
+    dispatch({ type: 'RESET' });
+  }, [dispatch]);
+
+  const addSchool = useCallback(
+    async (name) => {
+      const school = await api.addSchool(name);
+      dispatch({ type: 'SET_COLLECTIONS', collections: await fetchCollections(['schools']) });
+      return school.id;
+    },
     [dispatch]
   );
-}
 
-// Matches phone+password against both owner and driver records — a phone
-// held by the same person in both roles shares one password (see ADD_OWNER),
-// so a correct login can resolve to one or two roles at once.
-export function findRolesForCredentials(state, phone, password) {
-  const owner = state.owners.find((o) => o.phone === phone && o.password === password);
-  const driver = state.drivers.find((d) => d.phone === phone && d.password === password && d.active);
-  const roles = [];
-  if (owner) roles.push({ role: 'owner', ownerId: owner.id, label: `Owner — ${owner.name}` });
-  if (driver) roles.push({ role: 'driver', driverId: driver.id, label: `Driver — ${driver.name}` });
-  return roles;
-}
+  const addOwner = useCallback(
+    async (payload) => {
+      const result = await api.addOwner(payload);
+      dispatch({ type: 'SET_COLLECTIONS', collections: await fetchCollections(['owners', 'drivers', 'scholars']) });
+      return result.owner.id;
+    },
+    [dispatch]
+  );
 
-// Used to distinguish "wrong password" from "no such account" for the login error message.
-export function phoneHasAnyAccount(state, phone) {
-  return state.owners.some((o) => o.phone === phone) || state.drivers.some((d) => d.phone === phone && d.active);
+  const addScholar = useCallback(
+    async (payload) => {
+      const scholar = await api.addScholar(payload);
+      dispatch({ type: 'SET_COLLECTIONS', collections: await fetchCollections(['scholars', 'guardians']) });
+      return scholar.id;
+    },
+    [dispatch]
+  );
+
+  const updateScholar = useCallback(
+    async (id, payload) => {
+      await api.updateScholar(id, payload);
+      dispatch({ type: 'SET_COLLECTIONS', collections: await fetchCollections(['scholars', 'guardians']) });
+    },
+    [dispatch]
+  );
+
+  const deactivateScholar = useCallback(
+    async (id) => {
+      await api.deactivateScholar(id);
+      dispatch({ type: 'SET_COLLECTIONS', collections: await fetchCollections(['scholars']) });
+    },
+    [dispatch]
+  );
+
+  const reactivateScholar = useCallback(
+    async (id) => {
+      await api.reactivateScholar(id);
+      dispatch({ type: 'SET_COLLECTIONS', collections: await fetchCollections(['scholars']) });
+    },
+    [dispatch]
+  );
+
+  const deleteScholar = useCallback(
+    async (id) => {
+      await api.deleteScholar(id);
+      dispatch({ type: 'SET_COLLECTIONS', collections: await fetchCollections(['scholars']) });
+    },
+    [dispatch]
+  );
+
+  const addDriver = useCallback(
+    async (payload) => {
+      const driver = await api.addDriver(payload);
+      dispatch({ type: 'SET_COLLECTIONS', collections: await fetchCollections(['drivers', 'scholars']) });
+      return driver.id;
+    },
+    [dispatch]
+  );
+
+  const updateDriver = useCallback(
+    async (id, payload) => {
+      await api.updateDriver(id, payload);
+      dispatch({ type: 'SET_COLLECTIONS', collections: await fetchCollections(['drivers', 'scholars']) });
+    },
+    [dispatch]
+  );
+
+  const deactivateDriver = useCallback(
+    async (id) => {
+      await api.deactivateDriver(id);
+      dispatch({ type: 'SET_COLLECTIONS', collections: await fetchCollections(['drivers']) });
+    },
+    [dispatch]
+  );
+
+  const reactivateDriver = useCallback(
+    async (id) => {
+      await api.reactivateDriver(id);
+      dispatch({ type: 'SET_COLLECTIONS', collections: await fetchCollections(['drivers']) });
+    },
+    [dispatch]
+  );
+
+  const deleteDriver = useCallback(
+    async (id) => {
+      await api.deleteDriver(id);
+      dispatch({ type: 'SET_COLLECTIONS', collections: await fetchCollections(['drivers']) });
+    },
+    [dispatch]
+  );
+
+  const logTripEvent = useCallback(
+    async (scholarId, eventType) => {
+      const result = await api.logTripEvent({ scholarId, eventType });
+      dispatch({ type: 'APPEND_TRIP_EVENT', event: normalizeTripEvent(result.event) });
+      return result.notifications;
+    },
+    [dispatch]
+  );
+
+  const generateInvoice = useCallback((payload) => api.generateInvoice(payload), []);
+  const markInvoicePaid = useCallback((id, paid) => api.markInvoicePaid(id, paid), []);
+  const attachProofOfPayment = useCallback((id, filename) => api.attachProof(id, filename), []);
+
+  return useMemo(
+    () => ({
+      loadCoreData,
+      login,
+      firstOwner,
+      logOut,
+      addSchool,
+      addOwner,
+      addScholar,
+      updateScholar,
+      deactivateScholar,
+      reactivateScholar,
+      deleteScholar,
+      addDriver,
+      updateDriver,
+      deactivateDriver,
+      reactivateDriver,
+      deleteDriver,
+      logTripEvent,
+      generateInvoice,
+      markInvoicePaid,
+      attachProofOfPayment,
+    }),
+    [
+      loadCoreData,
+      login,
+      firstOwner,
+      logOut,
+      addSchool,
+      addOwner,
+      addScholar,
+      updateScholar,
+      deactivateScholar,
+      reactivateScholar,
+      deleteScholar,
+      addDriver,
+      updateDriver,
+      deactivateDriver,
+      reactivateDriver,
+      deleteDriver,
+      logTripEvent,
+      generateInvoice,
+      markInvoicePaid,
+      attachProofOfPayment,
+    ]
+  );
 }
 
 export { TRANSPORT_PLANS };

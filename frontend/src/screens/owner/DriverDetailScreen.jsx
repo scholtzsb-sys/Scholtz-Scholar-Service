@@ -83,8 +83,8 @@ export default function DriverDetailScreen() {
             confirmLabel="Deactivate"
             danger
             onCancel={() => setConfirming(false)}
-            onConfirm={() => {
-              deactivateDriver(driver.id);
+            onConfirm={async () => {
+              await deactivateDriver(driver.id);
               navigate('/owner/drivers');
             }}
           />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Screen, TopBar, Button, Field, TextInput } from '../../components/ui/Primitives';
+import { Screen, TopBar, Button, Field, TextInput, EmptyState } from '../../components/ui/Primitives';
 import ScholarAssignmentPicker from '../../components/ScholarAssignmentPicker';
 import { useApp, useAppActions } from '../../state/AppContext';
 import './owner.css';
@@ -24,20 +24,34 @@ export default function DriverFormScreen({ edit }) {
   const [password, setPassword] = useState('');
   const [vehicleReg, setVehicleReg] = useState(existing?.vehicleReg ?? '');
   const [assignedIds, setAssignedIds] = useState(existingAssigned);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = name.trim() && phone.trim() && vehicleReg.trim() && (edit || password.length > 0);
+  const canSubmit = name.trim() && phone.trim() && vehicleReg.trim() && (edit || password.length > 0) && !submitting;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!canSubmit) return;
-    const payload = { name: name.trim(), phone: phone.trim(), vehicleReg: vehicleReg.trim() };
+    setSubmitting(true);
+    setError('');
+    const payload = {
+      name: name.trim(),
+      phone: phone.trim(),
+      vehicleReg: vehicleReg.trim(),
+      assignedScholarIds: assignedIds,
+    };
     if (password.length > 0) payload.password = password;
-    if (edit && existing) {
-      updateDriver(existing.id, payload, assignedIds);
-      navigate(`/owner/drivers/${existing.id}`);
-    } else {
-      const newId = addDriver({ ...payload, linkedOwnerId: null }, assignedIds);
-      navigate(`/owner/drivers/${newId}`);
+    try {
+      if (edit && existing) {
+        await updateDriver(existing.id, payload);
+        navigate(`/owner/drivers/${existing.id}`);
+      } else {
+        const newId = await addDriver(payload);
+        navigate(`/owner/drivers/${newId}`);
+      }
+    } catch (err) {
+      setError(err.message);
+      setSubmitting(false);
     }
   }
 
@@ -68,8 +82,9 @@ export default function DriverFormScreen({ edit }) {
           <ScholarAssignmentPicker assignedIds={assignedIds} onChange={setAssignedIds} excludeDriverId={existing?.id} />
         </div>
 
+        {error && <EmptyState title={error} />}
         <Button type="submit" full size="lg" disabled={!canSubmit}>
-          {edit ? 'Save changes' : 'Register driver'}
+          {submitting ? 'Saving…' : edit ? 'Save changes' : 'Register driver'}
         </Button>
       </form>
     </Screen>

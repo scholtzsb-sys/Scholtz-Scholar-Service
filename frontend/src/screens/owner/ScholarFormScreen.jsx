@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Screen, TopBar, Card, Button, Field, TextInput, Select, Toggle, Badge } from '../../components/ui/Primitives';
+import { Screen, TopBar, Card, Button, Field, TextInput, Select, Toggle, Badge, EmptyState } from '../../components/ui/Primitives';
 import { useApp, useAppActions } from '../../state/AppContext';
 import { TRANSPORT_PLANS } from '../../lib/mockData';
 import { guardiansForScholar } from '../../lib/selectors';
@@ -46,6 +46,8 @@ export default function ScholarFormScreen({ edit }) {
     if (!existing) return [];
     return guardiansForScholar(state, existing).map((g) => ({ ...g, isExisting: true }));
   });
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const siblingCandidates = state.scholars.filter((s) => s.active && s.id !== id);
 
@@ -80,63 +82,55 @@ export default function ScholarFormScreen({ edit }) {
     setContacts((cs) => cs.filter((c) => c.id !== cid));
   }
 
-  const canSubmit = name.trim() && schoolId && homeAddress.trim() && (!addingSchool || newSchoolName.trim());
+  const canSubmit =
+    name.trim() && schoolId && homeAddress.trim() && (!addingSchool || newSchoolName.trim()) && !submitting;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!canSubmit) return;
+    setSubmitting(true);
+    setError('');
 
-    let finalSchoolId = schoolId;
-    if (addingSchool && newSchoolName.trim()) {
-      finalSchoolId = addSchool(newSchoolName.trim());
-    }
+    try {
+      let finalSchoolId = schoolId;
+      if (addingSchool && newSchoolName.trim()) {
+        finalSchoolId = await addSchool(newSchoolName.trim());
+      }
 
-    const guardianLinks = contacts.map((c) => ({ guardianId: c.id, notify: c.notify }));
-    const newGuardians = contacts
-      .filter((c) => !c.isExisting)
-      .map((c) => ({
-        id: c.id,
-        name: c.name.trim(),
-        phone: c.phone.trim(),
-        type: c.type,
-        isBillingContact: c.isBillingContact,
-        billingChannel: c.isBillingContact ? c.billingChannel : null,
-        email: c.isBillingContact && c.billingChannel === 'email' ? c.email.trim() : '',
-        lastInboundMessageAt: null,
-      }));
-    const upsertExisting = contacts
-      .filter((c) => c.isExisting)
-      .map((c) => ({
-        id: c.id,
-        name: c.name.trim(),
-        phone: c.phone.trim(),
-        type: c.type,
-        isBillingContact: c.isBillingContact,
-        billingChannel: c.isBillingContact ? c.billingChannel : null,
-        email: c.isBillingContact && c.billingChannel === 'email' ? c.email.trim() : '',
-      }));
+      const guardianLinks = contacts.map((c) => {
+        const base = {
+          notify: c.notify,
+          name: c.name.trim(),
+          phone: c.phone.trim(),
+          type: c.type,
+          isBillingContact: c.isBillingContact,
+          billingChannel: c.isBillingContact ? c.billingChannel : null,
+          email: c.isBillingContact && c.billingChannel === 'email' ? c.email.trim() : '',
+        };
+        return c.isExisting ? { ...base, guardianId: c.id } : base;
+      });
 
-    const scholarPayload = {
-      name: name.trim(),
-      grade: grade.trim(),
-      schoolId: finalSchoolId,
-      homeAddress: homeAddress.trim(),
-      transportPlan,
-      guardianLinks,
-      feePerMonth: Number(feePerMonth) || 0,
-      notifyAddon,
-    };
+      const scholarPayload = {
+        name: name.trim(),
+        grade: grade.trim(),
+        schoolId: finalSchoolId,
+        homeAddress: homeAddress.trim(),
+        transportPlan,
+        guardianLinks,
+        feePerMonth: Number(feePerMonth) || 0,
+        notifyAddon,
+      };
 
-    if (edit && existing) {
-      updateScholar(existing.id, scholarPayload, upsertExisting);
-      navigate(`/owner/scholars/${existing.id}`);
-    } else {
-      const newId = addScholar(
-        { ...scholarPayload, driverId: null, pickupOrder: null },
-        newGuardians
-      );
-      if (upsertExisting.length) updateScholar(newId, {}, upsertExisting);
-      navigate(`/owner/scholars/${newId}`);
+      if (edit && existing) {
+        await updateScholar(existing.id, scholarPayload);
+        navigate(`/owner/scholars/${existing.id}`);
+      } else {
+        const newId = await addScholar(scholarPayload);
+        navigate(`/owner/scholars/${newId}`);
+      }
+    } catch (err) {
+      setError(err.message);
+      setSubmitting(false);
     }
   }
 
@@ -288,8 +282,9 @@ export default function ScholarFormScreen({ edit }) {
           </Card>
         ))}
 
+        {error && <EmptyState title={error} />}
         <Button type="submit" full size="lg" disabled={!canSubmit}>
-          {edit ? 'Save changes' : 'Register scholar'}
+          {submitting ? 'Saving…' : edit ? 'Save changes' : 'Register scholar'}
         </Button>
       </form>
     </Screen>

@@ -6,16 +6,6 @@ import { billingGuardianForScholar, schoolName } from '../../lib/selectors';
 import './owner.css';
 import './invoicing.css';
 
-function nextInvoiceNumber(invoices) {
-  const year = new Date().getFullYear();
-  const seq = invoices.length + 813;
-  return `SSS-${year}-${seq}`;
-}
-
-function monthLabel(date) {
-  return date.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
-}
-
 export default function GenerateInvoiceScreen() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -32,6 +22,8 @@ export default function GenerateInvoiceScreen() {
 
   const [fees, setFees] = useState(() => Object.fromEntries(familyScholars.map((s) => [s.id, s.feePerMonth])));
   const [sentInvoiceId, setSentInvoiceId] = useState(null);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   if (!scholar) {
     return (
@@ -56,31 +48,17 @@ export default function GenerateInvoiceScreen() {
 
   const subtotal = familyScholars.reduce((sum, s) => sum + Number(fees[s.id] || 0) + (s.notifyAddon ? 100 : 0), 0);
 
-  function handleGenerate() {
-    const issued = new Date();
-    const due = new Date(issued);
-    due.setMonth(due.getMonth() + 1);
-    const invoiceNumber = nextInvoiceNumber(state.invoices);
-    const lineItems = familyScholars.map((s) => ({
-      scholarId: s.id,
-      scholarName: s.name,
-      school: schoolName(state, s.schoolId),
-      transportPlan: s.transportPlan,
-      amount: Number(fees[s.id] || 0),
-      notifyAddon: s.notifyAddon,
-      addonAmount: s.notifyAddon ? 100 : 0,
-    }));
-    const invoiceId = generateInvoice({
-      billingGuardianId: billing.id,
-      invoiceNumber,
-      month: monthLabel(issued),
-      issuedDate: issued.toISOString().slice(0, 10),
-      dueDate: due.toISOString().slice(0, 10),
-      lineItems,
-      subtotal,
-      total: subtotal,
-    });
-    setSentInvoiceId(invoiceId);
+  async function handleGenerate() {
+    setSubmitting(true);
+    setError('');
+    try {
+      const lineItems = familyScholars.map((s) => ({ scholarId: s.id, amount: Number(fees[s.id] || 0) }));
+      const { invoice } = await generateInvoice({ billingGuardianId: billing.id, lineItems });
+      setSentInvoiceId(invoice.id);
+    } catch (err) {
+      setError(err.message);
+      setSubmitting(false);
+    }
   }
 
   if (sentInvoiceId) {
@@ -143,8 +121,9 @@ export default function GenerateInvoiceScreen() {
         <strong>R{subtotal.toFixed(2)}</strong>
       </Card>
 
-      <Button size="lg" full onClick={handleGenerate}>
-        Generate &amp; send invoice
+      {error && <EmptyState title={error} />}
+      <Button size="lg" full onClick={handleGenerate} disabled={submitting}>
+        {submitting ? 'Generating…' : 'Generate & send invoice'}
       </Button>
     </Screen>
   );

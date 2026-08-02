@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card, EmptyState } from '../../components/ui/Primitives';
 import { useApp, useAppActions } from '../../state/AppContext';
 import { useCurrentDriver } from '../../state/hooks';
-import { stageStatusForScholar, guardiansForScholar, hasFreeSessionWindow } from '../../lib/selectors';
+import { stageStatusForScholar } from '../../lib/selectors';
 import { STAGE_ACTION_LABELS } from '../../lib/mockData';
 import { initials } from '../../lib/palette';
 import './driver.css';
@@ -18,17 +18,13 @@ export default function TripScreen() {
     .filter((s) => s.driverId === driver?.id && s.active)
     .sort((a, b) => (a.pickupOrder ?? 0) - (b.pickupOrder ?? 0));
 
-  function handleTap(scholar, stage) {
-    const guardians = guardiansForScholar(state, scholar);
-    const preview = guardians.map((g) => ({
-      id: g.id,
-      guardianName: g.name,
-      sent: g.notify,
-      channel: g.notify ? (hasFreeSessionWindow(g) ? 'free_session' : 'paid_template') : null,
-      reason: g.notify ? null : 'guardian has notifications turned off',
+  async function handleTap(scholar, stage) {
+    const notifications = await logTripEvent(scholar.id, stage);
+    const withNames = notifications.map((n) => ({
+      ...n,
+      guardianName: state.guardians.find((g) => g.id === n.guardianId)?.name ?? 'Guardian',
     }));
-    logTripEvent(scholar.id, stage);
-    setLastAction({ scholarName: scholar.name, stage, notifications: preview });
+    setLastAction({ scholarName: scholar.name, stage, notifications: withNames });
   }
 
   return (
@@ -76,7 +72,7 @@ export default function TripScreen() {
           </p>
           <ul>
             {lastAction.notifications.map((n) => (
-              <li key={n.id}>
+              <li key={n.guardianId}>
                 {n.sent ? `Notified ${n.guardianName} (${n.channel === 'free_session' ? 'free session' : 'WhatsApp'})` : `${n.guardianName}: ${n.reason}`}
               </li>
             ))}

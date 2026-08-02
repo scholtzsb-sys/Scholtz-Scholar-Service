@@ -1,23 +1,32 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Screen, Button, Card } from '../../components/ui/Primitives';
+import { Screen, Button, Card, EmptyState } from '../../components/ui/Primitives';
 import { useAppActions } from '../../state/AppContext';
 
 export default function ContinueAsScreen() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { startSession } = useAppActions();
-  const { phone, roles } = location.state || {};
+  const { login } = useAppActions();
+  const { phone, password, roles } = location.state || {};
+  const [error, setError] = useState('');
+  const [choosing, setChoosing] = useState(null);
 
   useEffect(() => {
-    if (!phone || !roles) navigate('/', { replace: true });
-  }, [phone, roles, navigate]);
+    if (!phone || !password || !roles) navigate('/', { replace: true });
+  }, [phone, password, roles, navigate]);
 
-  if (!phone || !roles) return null;
+  if (!phone || !password || !roles) return null;
 
-  function choose(role) {
-    startSession({ ...role, phone });
-    navigate(role.role === 'owner' ? '/owner' : '/driver', { replace: true });
+  async function choose(role) {
+    setChoosing(role.role);
+    setError('');
+    try {
+      const result = await login(phone, password, role.role);
+      navigate(result.session.role === 'owner' ? '/owner' : '/driver', { replace: true });
+    } catch (err) {
+      setError(err.message);
+      setChoosing(null);
+    }
   }
 
   return (
@@ -26,12 +35,15 @@ export default function ContinueAsScreen() {
         <h1>Continue as…</h1>
         <p>This number is linked to more than one role.</p>
       </div>
+      {error && <EmptyState title={error} />}
       <div className="continue-as-list">
         {roles.map((r) => (
           <Card key={r.role} className="continue-as-card" onClick={() => choose(r)}>
             <span className="continue-as-role">{r.role === 'owner' ? 'Owner' : 'Driver'}</span>
             <span>{r.label.split('— ')[1]}</span>
-            <Button size="sm">Continue</Button>
+            <Button size="sm" disabled={choosing === r.role}>
+              {choosing === r.role ? 'Continuing…' : 'Continue'}
+            </Button>
           </Card>
         ))}
       </div>

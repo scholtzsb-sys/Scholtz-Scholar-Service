@@ -64,18 +64,6 @@ export function billingGuardianForScholar(state, scholar) {
   return guardians.find((g) => g.isBillingContact) ?? null;
 }
 
-// A "family" = every active scholar sharing the same billing guardian.
-export function familiesGroupedByBillingGuardian(state) {
-  const map = new Map();
-  state.scholars.forEach((scholar) => {
-    const billing = billingGuardianForScholar(state, scholar);
-    if (!billing) return;
-    if (!map.has(billing.id)) map.set(billing.id, { billingGuardian: billing, scholars: [] });
-    map.get(billing.id).scholars.push(scholar);
-  });
-  return map;
-}
-
 export function schoolName(state, schoolId) {
   return state.schools.find((s) => s.id === schoolId)?.name ?? 'Unknown school';
 }
@@ -86,10 +74,4 @@ export function driverName(state, driverId) {
 
 export function withColor(scholar) {
   return { ...scholar, color: scholarColor(scholar.colorIndex) };
-}
-
-export function invoicesForBillingGuardian(state, billingGuardianId) {
-  return state.invoices
-    .filter((i) => i.billingGuardianId === billingGuardianId)
-    .sort((a, b) => new Date(b.issuedDate) - new Date(a.issuedDate));
 }

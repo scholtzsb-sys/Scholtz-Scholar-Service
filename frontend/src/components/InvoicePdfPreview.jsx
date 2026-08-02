@@ -36,10 +36,13 @@ export default function InvoicePdfPreview({ invoice, billing }) {
         </thead>
         <tbody>
           {invoice.lineItems.map((li) => (
-            <tr key={li.scholarId}>
+            <tr key={li.id}>
               <td>
                 <div className="pdf-scholar-name">{li.scholarName}</div>
-                <div className="pdf-scholar-meta">{li.school} · Drop-off &amp; pick-up</div>
+                <div className="pdf-scholar-meta">
+                  {li.school}
+                  {li.transportPlan ? ` · ${li.transportPlan}` : ''}
+                </div>
                 {li.notifyAddon && <div className="pdf-scholar-meta">+ WhatsApp notifications: R{li.addonAmount.toFixed(2)}</div>}
               </td>
               <td>{invoice.month}</td>

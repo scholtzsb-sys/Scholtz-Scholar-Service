@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Screen, TopBar, Button, Field, TextInput, Toggle } from '../../components/ui/Primitives';
+import { Screen, TopBar, Button, Field, TextInput, Toggle, EmptyState } from '../../components/ui/Primitives';
 import { useAppActions } from '../../state/AppContext';
 
 export default function FirstOwnerScreen() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { addOwner, startSession } = useAppActions();
+  const { firstOwner } = useAppActions();
   const phone = location.state?.phone;
 
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [alsoDrives, setAlsoDrives] = useState(false);
   const [vehicleReg, setVehicleReg] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!phone) navigate('/', { replace: true });
@@ -20,15 +22,20 @@ export default function FirstOwnerScreen() {
 
   if (!phone) return null;
 
-  const canSubmit = name.trim() && password.length > 0;
+  const canSubmit = name.trim() && password.length > 0 && !submitting;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!canSubmit) return;
-    const owner = { name: name.trim(), phone, password, alsoDrives, vehicleReg: alsoDrives ? vehicleReg.trim() : '' };
-    const ownerId = addOwner(owner);
-    startSession({ role: 'owner', ownerId, phone });
-    navigate('/owner', { replace: true, state: { justBootstrapped: true } });
+    setSubmitting(true);
+    setError('');
+    try {
+      await firstOwner({ name: name.trim(), phone, password, alsoDrives, vehicleReg: alsoDrives ? vehicleReg.trim() : '' });
+      navigate('/owner', { replace: true, state: { justBootstrapped: true } });
+    } catch (err) {
+      setError(err.message);
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -50,8 +57,9 @@ export default function FirstOwnerScreen() {
             <TextInput value={vehicleReg} onChange={(e) => setVehicleReg(e.target.value)} placeholder="e.g. CA 123-456" />
           </Field>
         )}
+        {error && <EmptyState title={error} />}
         <Button type="submit" full size="lg" disabled={!canSubmit}>
-          Create owner account
+          {submitting ? 'Creating…' : 'Create owner account'}
         </Button>
       </form>
     </Screen>

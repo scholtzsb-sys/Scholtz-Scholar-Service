@@ -101,8 +101,8 @@ export default function ScholarDetailScreen() {
             confirmLabel="Deactivate"
             danger
             onCancel={() => setConfirmDeactivate(false)}
-            onConfirm={() => {
-              deactivateScholar(scholar.id);
+            onConfirm={async () => {
+              await deactivateScholar(scholar.id);
               navigate('/owner/scholars');
             }}
           />
