@@ -101,7 +101,6 @@ export default function LandingScreen() {
       <div className="landing-hero">
         <img src={logo} className="landing-logo" alt="Scholtz Scholar Service" />
         <h1 className="landing-title">Scholtz Scholar Service</h1>
-        <p className="landing-trust">Safe, tracked scholar transport — for owners and drivers.</p>
       </div>
       <form onSubmit={handleSubmit} className="landing-form">
         <Field label="Phone number">
