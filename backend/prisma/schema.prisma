@@ -32,6 +32,7 @@ enum TripEventType {
 
 enum InvoiceStatus {
   UNPAID
+  PARTIAL
   PAID
 }
 
@@ -146,13 +147,20 @@ model TripEvent {
 model Invoice {
   id                     String        @id @default(cuid())
   invoiceNumber          String        @unique
-  month                  String
+  // The billing period this invoice covers — chosen by the owner at
+  // generation time, not assumed to be a calendar month.
+  periodStart            DateTime
+  periodEnd              DateTime
   issuedDate             DateTime
   dueDate                DateTime
   subtotal               Int
   total                  Int
+  // Denormalized sum of `payments`, kept in sync by the payments route —
+  // avoids re-summing on every read. status is derived from this vs. total.
+  amountPaid             Int           @default(0)
   status                 InvoiceStatus @default(UNPAID)
   proofOfPaymentFilename String?
+  // Set only when status first reaches PAID — not touched by partial payments.
   paidAt                 DateTime?
   createdAt              DateTime      @default(now())
 
@@ -160,6 +168,21 @@ model Invoice {
   billingGuardian   Guardian @relation(fields: [billingGuardianId], references: [id])
 
   lineItems InvoiceLineItem[]
+  payments  Payment[]
+}
+
+// One row per payment transaction against an invoice — a family paying in
+// two installments produces two rows, so the app has a real record of each
+// payment rather than a single overwritable "amount paid" field. Invoices
+// are deliberately never rolled into the next month's invoice: each stays
+// an independent record of exactly what it covers.
+model Payment {
+  id     String   @id @default(cuid())
+  amount Int
+  paidAt DateTime @default(now())
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
 // Line items snapshot scholar name/school/plan at invoice-generation time so

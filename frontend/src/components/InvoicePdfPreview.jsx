@@ -1,9 +1,13 @@
 import logo from '../assets/logo.png';
+import { formatPeriod } from '../lib/invoiceFormat';
 import './invoicePdfPreview.css';
 
 // Mirrors the real brand identity (navy/yellow/sky-blue) used on the actual
 // invoice PDF sent to families — intentionally not the app's teal UI palette.
+// Doubles as a pre-send preview: `invoice.invoiceNumber` is null until the
+// owner actually sends it, since nothing is persisted before that point.
 export default function InvoicePdfPreview({ invoice, billing }) {
+  const period = formatPeriod(invoice.periodStart, invoice.periodEnd);
   return (
     <div className="pdf-preview">
       <div className="pdf-header">
@@ -13,7 +17,7 @@ export default function InvoicePdfPreview({ invoice, billing }) {
         </div>
         <div className="pdf-meta">
           <div className="pdf-invoice-label">INVOICE</div>
-          <div>Invoice #{invoice.invoiceNumber}</div>
+          <div>Invoice #{invoice.invoiceNumber ?? 'Pending'}</div>
           <div>Issued {new Date(invoice.issuedDate).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
           <div>Due {new Date(invoice.dueDate).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
         </div>
@@ -36,7 +40,7 @@ export default function InvoicePdfPreview({ invoice, billing }) {
         </thead>
         <tbody>
           {invoice.lineItems.map((li) => (
-            <tr key={li.id}>
+            <tr key={li.id ?? li.scholarId}>
               <td>
                 <div className="pdf-scholar-name">{li.scholarName}</div>
                 <div className="pdf-scholar-meta">
@@ -45,7 +49,7 @@ export default function InvoicePdfPreview({ invoice, billing }) {
                 </div>
                 {li.notifyAddon && <div className="pdf-scholar-meta">+ WhatsApp notifications: R{li.addonAmount.toFixed(2)}</div>}
               </td>
-              <td>{invoice.month}</td>
+              <td>{period}</td>
               <td>R{(li.amount + (li.addonAmount || 0)).toFixed(2)}</td>
             </tr>
           ))}
@@ -83,7 +87,7 @@ export default function InvoicePdfPreview({ invoice, billing }) {
         </div>
         <div className="pdf-bank-row">
           <span>Reference</span>
-          <span>{invoice.invoiceNumber}</span>
+          <span>{invoice.invoiceNumber ?? 'Assigned when sent'}</span>
         </div>
       </div>
 

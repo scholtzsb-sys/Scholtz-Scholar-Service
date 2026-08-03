@@ -19,6 +19,7 @@ import AddOwnerScreen from './screens/owner/AddOwnerScreen';
 import GenerateInvoiceScreen from './screens/owner/GenerateInvoiceScreen';
 import InvoiceHistoryScreen from './screens/owner/InvoiceHistoryScreen';
 import InvoiceDetailScreen from './screens/owner/InvoiceDetailScreen';
+import RecordPaymentScreen from './screens/owner/RecordPaymentScreen';
 
 import TripScreen from './screens/driver/TripScreen';
 import DriverProfileScreen from './screens/driver/DriverProfileScreen';
@@ -47,6 +48,7 @@ function App() {
             <Route path="/owner/profile/add-owner" element={<AddOwnerScreen />} />
             <Route path="/owner/families/:billingGuardianId/invoices" element={<InvoiceHistoryScreen />} />
             <Route path="/owner/invoices/:invoiceId" element={<InvoiceDetailScreen />} />
+            <Route path="/owner/invoices/:invoiceId/payment" element={<RecordPaymentScreen />} />
           </Route>
 
           <Route element={<RequireRole role="driver" />}>

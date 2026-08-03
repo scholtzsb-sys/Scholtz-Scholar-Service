@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Screen, TopBar, Card, Button, Badge, Toggle, EmptyState } from '../../components/ui/Primitives';
+import { Screen, TopBar, Card, Button, Badge, EmptyState } from '../../components/ui/Primitives';
 import { useAppActions } from '../../state/AppContext';
 import { api } from '../../lib/api';
+import { formatPeriod, invoiceStatusMeta, balanceDue } from '../../lib/invoiceFormat';
 import InvoicePdfPreview from '../../components/InvoicePdfPreview';
 import './owner.css';
 import './invoicing.css';
@@ -10,7 +11,7 @@ import './invoicing.css';
 export default function InvoiceDetailScreen() {
   const { invoiceId } = useParams();
   const navigate = useNavigate();
-  const { markInvoicePaid, attachProofOfPayment } = useAppActions();
+  const { attachProofOfPayment } = useAppActions();
   const [showPdf, setShowPdf] = useState(false);
   const [invoice, setInvoice] = useState(null); // null while loading
   const [error, setError] = useState('');
@@ -46,16 +47,13 @@ export default function InvoiceDetailScreen() {
   }
 
   const billing = invoice.billingGuardian;
+  const statusMeta = invoiceStatusMeta(invoice.status);
+  const balance = balanceDue(invoice);
 
   async function handleProofChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
     await attachProofOfPayment(invoice.id, file.name);
-    refetch();
-  }
-
-  async function handleTogglePaid(v) {
-    await markInvoicePaid(invoice.id, v);
     refetch();
   }
 
@@ -65,8 +63,8 @@ export default function InvoiceDetailScreen() {
 
       <Card>
         <div className="guardian-card-top">
-          <strong>{invoice.month}</strong>
-          <Badge tone={invoice.status === 'PAID' ? 'success' : 'warning'}>{invoice.status === 'PAID' ? 'Paid' : 'Unpaid'}</Badge>
+          <strong>{formatPeriod(invoice.periodStart, invoice.periodEnd)}</strong>
+          <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
         </div>
         <p className="assignment-meta">Billed to {billing?.name}</p>
       </Card>
@@ -107,12 +105,41 @@ export default function InvoiceDetailScreen() {
         </label>
       </Card>
 
-      <Card>
-        <Toggle checked={invoice.status === 'PAID'} onChange={handleTogglePaid} label="Mark as paid" />
-        {invoice.status === 'PAID' && (
-          <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
-            Marking paid sent a "payment received" WhatsApp confirmation to {billing?.name}.
+      <Card className="form-section">
+        <span className="section-heading">Payment</span>
+        <div className="invoice-history-row" style={{ padding: 0, cursor: 'default' }}>
+          <span>Invoice total</span>
+          <span>R{invoice.total.toFixed(2)}</span>
+        </div>
+        <div className="invoice-history-row" style={{ padding: 0, cursor: 'default' }}>
+          <span>Paid to date</span>
+          <span>R{invoice.amountPaid.toFixed(2)}</span>
+        </div>
+        <div className="invoice-history-row" style={{ padding: 0, cursor: 'default', fontWeight: 700 }}>
+          <span>Balance due</span>
+          <span>R{balance.toFixed(2)}</span>
+        </div>
+
+        {invoice.payments?.length > 0 && (
+          <div>
+            <span className="section-heading" style={{ display: 'block', marginTop: 8 }}>
+              Payment history
+            </span>
+            {invoice.payments.map((p) => (
+              <div key={p.id} className="invoice-history-row" style={{ padding: '4px 0', cursor: 'default' }}>
+                <span>{new Date(p.paidAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                <span>R{p.amount.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {invoice.status === 'PAID' ? (
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
+            A "payment received" WhatsApp confirmation was sent to {billing?.name}.
           </p>
+        ) : (
+          <Button onClick={() => navigate(`/owner/invoices/${invoice.id}/payment`)}>Record payment</Button>
         )}
       </Card>
     </Screen>

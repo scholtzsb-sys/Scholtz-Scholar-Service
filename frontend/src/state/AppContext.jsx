@@ -271,7 +271,7 @@ export function useAppActions() {
   );
 
   const generateInvoice = useCallback((payload) => api.generateInvoice(payload), []);
-  const markInvoicePaid = useCallback((id, paid) => api.markInvoicePaid(id, paid), []);
+  const recordPayment = useCallback((id, amount) => api.recordPayment(id, amount), []);
   const attachProofOfPayment = useCallback((id, filename) => api.attachProof(id, filename), []);
 
   return useMemo(
@@ -295,7 +295,7 @@ export function useAppActions() {
       deleteDriver,
       logTripEvent,
       generateInvoice,
-      markInvoicePaid,
+      recordPayment,
       attachProofOfPayment,
     }),
     [
@@ -318,7 +318,7 @@ export function useAppActions() {
       deleteDriver,
       logTripEvent,
       generateInvoice,
-      markInvoicePaid,
+      recordPayment,
       attachProofOfPayment,
     ]
   );

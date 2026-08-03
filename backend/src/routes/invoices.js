@@ -11,10 +11,6 @@ const PLAN_LABELS = {
   AFTERNOON: 'Home pick-up only',
 };
 
-function monthLabel(date) {
-  return date.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
-}
-
 async function nextInvoiceNumber() {
   const count = await prisma.invoice.count();
   return `SSS-${new Date().getFullYear()}-${count + 801}`;
@@ -32,20 +28,25 @@ router.get('/family/:billingGuardianId', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   const invoice = await prisma.invoice.findUnique({
     where: { id: req.params.id },
-    include: { lineItems: true, billingGuardian: true },
+    include: { lineItems: true, billingGuardian: true, payments: { orderBy: { paidAt: 'asc' } } },
   });
   if (!invoice) return res.status(404).json({ error: 'Not found' });
   res.json(invoice);
 });
 
 // Bundles every scholar the caller lists (expected to be every active
-// scholar sharing the same billing guardian) into one family invoice.
-// Line items snapshot scholar name/school/plan at generation time so this
-// invoice stays accurate even if the scholar is edited or deleted later.
+// scholar sharing the same billing guardian) into one family invoice, for
+// the period the owner chose. Line items snapshot scholar name/school/plan
+// at generation time so this invoice stays accurate even if the scholar is
+// edited or deleted later. The frontend only calls this once the owner has
+// confirmed the preview and clicked "Send" — this call both creates and
+// delivers the invoice in one step.
 router.post('/', requireAuth, requireRole('owner'), async (req, res) => {
-  const { billingGuardianId, lineItems } = req.body;
-  if (!billingGuardianId || !Array.isArray(lineItems) || lineItems.length === 0) {
-    return res.status(400).json({ error: 'billingGuardianId and at least one line item are required' });
+  const { billingGuardianId, periodStart, periodEnd, lineItems } = req.body;
+  if (!billingGuardianId || !periodStart || !periodEnd || !Array.isArray(lineItems) || lineItems.length === 0) {
+    return res
+      .status(400)
+      .json({ error: 'billingGuardianId, periodStart, periodEnd, and at least one line item are required' });
   }
 
   const billingGuardian = await prisma.guardian.findUnique({ where: { id: billingGuardianId } });
@@ -79,7 +80,8 @@ router.post('/', requireAuth, requireRole('owner'), async (req, res) => {
   const invoice = await prisma.invoice.create({
     data: {
       invoiceNumber: await nextInvoiceNumber(),
-      month: monthLabel(issuedDate),
+      periodStart: new Date(periodStart),
+      periodEnd: new Date(periodEnd),
       issuedDate,
       dueDate,
       subtotal,
@@ -103,32 +105,46 @@ router.post('/', requireAuth, requireRole('owner'), async (req, res) => {
   res.status(201).json({ invoice, deliveredVia: channel });
 });
 
-// Reversible. Marking paid (but not unmarking) fires a "payment received"
-// confirmation — proof-of-payment attachment and paid status are
-// intentionally independent of each other.
-router.post('/:id/paid', requireAuth, requireRole('owner'), async (req, res) => {
-  const { paid } = req.body;
-  const existing = await prisma.invoice.findUnique({
+// Records one payment transaction (full or partial — the frontend decides
+// which amount to send). Invoices are never rolled into the next period;
+// an outstanding balance just stays outstanding on this invoice. Fires the
+// "payment received" notification only the moment the invoice first
+// reaches PAID — not on every partial installment.
+router.post('/:id/payments', requireAuth, requireRole('owner'), async (req, res) => {
+  const { amount } = req.body;
+  if (!amount || Number(amount) <= 0) {
+    return res.status(400).json({ error: 'amount must be greater than 0' });
+  }
+
+  const invoice = await prisma.invoice.findUnique({
     where: { id: req.params.id },
     include: { billingGuardian: true },
   });
-  if (!existing) return res.status(404).json({ error: 'Not found' });
+  if (!invoice) return res.status(404).json({ error: 'Not found' });
 
-  const becomingPaid = paid && existing.status !== 'PAID';
+  const payment = await prisma.payment.create({ data: { amount: Number(amount), invoiceId: invoice.id } });
 
-  const invoice = await prisma.invoice.update({
-    where: { id: req.params.id },
-    data: { status: paid ? 'PAID' : 'UNPAID', paidAt: paid ? new Date() : null },
-    include: { lineItems: true },
+  const newAmountPaid = invoice.amountPaid + Number(amount);
+  const newStatus = newAmountPaid >= invoice.total ? 'PAID' : newAmountPaid > 0 ? 'PARTIAL' : 'UNPAID';
+  const becamePaid = newStatus === 'PAID' && invoice.status !== 'PAID';
+
+  const updated = await prisma.invoice.update({
+    where: { id: invoice.id },
+    data: {
+      amountPaid: newAmountPaid,
+      status: newStatus,
+      paidAt: becamePaid ? new Date() : invoice.paidAt,
+    },
+    include: { lineItems: true, payments: { orderBy: { paidAt: 'asc' } }, billingGuardian: true },
   });
 
-  if (becomingPaid) {
-    await stubWhatsappClient.sendTemplateMessage(existing.billingGuardian.phone, 'payment_received', {
+  if (becamePaid) {
+    await stubWhatsappClient.sendTemplateMessage(invoice.billingGuardian.phone, 'payment_received', {
       invoiceNumber: invoice.invoiceNumber,
     });
   }
 
-  res.json(invoice);
+  res.status(201).json({ payment, invoice: updated });
 });
 
 router.post('/:id/proof', requireAuth, requireRole('owner'), async (req, res) => {

@@ -24,7 +24,8 @@
       "PowerShell(Get-Command docker -ErrorAction SilentlyContinue)",
       "Bash(grep \"stub-whatsapp\" /tmp/backend.log)",
       "Bash(curl -s -i --max-time 20 https://scholar-transport-backend.onrender.com/api/health)",
-      "Bash(netstat -ano)"
+      "Bash(netstat -ano)",
+      "Bash(curl -s --max-time 30 -X POST https://scholar-transport-backend.onrender.com/api/auth/login -H \"Content-Type: application/json\" -d '{\"phone\":\"0821111111\",\"password\":\"demo1234\"}')"
     ]
   }
 }

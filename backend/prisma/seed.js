@@ -173,11 +173,13 @@ async function main() {
   await prisma.invoice.create({
     data: {
       invoiceNumber: 'SSS-2026-0812',
-      month: 'July 2026',
+      periodStart: new Date('2026-07-01'),
+      periodEnd: new Date('2026-07-31'),
       issuedDate: new Date('2026-07-01'),
       dueDate: new Date('2026-08-01'),
       subtotal: 1800,
       total: 1800,
+      amountPaid: 1800,
       status: 'PAID',
       paidAt: new Date('2026-07-03T09:12:00'),
       proofOfPaymentFilename: 'dlamini_eft_proof.jpg',
@@ -203,6 +205,9 @@ async function main() {
             addonAmount: 0,
           },
         ],
+      },
+      payments: {
+        create: [{ amount: 1800, paidAt: new Date('2026-07-03T09:12:00') }],
       },
     },
   });

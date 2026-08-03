@@ -1,10 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Screen, TopBar, Card, Button, EmptyState, Badge } from '../../components/ui/Primitives';
+import { Screen, TopBar, Card, Button, Field, TextInput, EmptyState, Badge } from '../../components/ui/Primitives';
 import { useApp, useAppActions } from '../../state/AppContext';
 import { billingGuardianForScholar, schoolName } from '../../lib/selectors';
+import { currentMonthRange } from '../../lib/invoiceFormat';
+import InvoicePdfPreview from '../../components/InvoicePdfPreview';
 import './owner.css';
 import './invoicing.css';
+
+const PLAN_DISPLAY_LABELS = {
+  full: 'Drop-off & pick-up',
+  morning: 'School drop-off only',
+  afternoon: 'Home pick-up only',
+};
 
 export default function GenerateInvoiceScreen() {
   const { id } = useParams();
@@ -20,7 +28,11 @@ export default function GenerateInvoiceScreen() {
     return state.scholars.filter((s) => s.active && billingGuardianForScholar(state, s)?.id === billing.id);
   }, [state, billing]);
 
+  const defaultRange = useMemo(() => currentMonthRange(), []);
+  const [periodStart, setPeriodStart] = useState(defaultRange.start);
+  const [periodEnd, setPeriodEnd] = useState(defaultRange.end);
   const [fees, setFees] = useState(() => Object.fromEntries(familyScholars.map((s) => [s.id, s.feePerMonth])));
+  const [draft, setDraft] = useState(null); // built locally by "Generate" — nothing saved until "Send"
   const [sentInvoiceId, setSentInvoiceId] = useState(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -47,13 +59,46 @@ export default function GenerateInvoiceScreen() {
   }
 
   const subtotal = familyScholars.reduce((sum, s) => sum + Number(fees[s.id] || 0) + (s.notifyAddon ? 100 : 0), 0);
+  const periodValid = periodStart && periodEnd && periodEnd >= periodStart;
 
-  async function handleGenerate() {
+  function handleGeneratePreview() {
+    if (!periodValid) {
+      setError('Choose a valid date range — the "to" date must be on or after the "from" date.');
+      return;
+    }
+    setError('');
+    const issuedDate = new Date();
+    const dueDate = new Date(issuedDate);
+    dueDate.setMonth(dueDate.getMonth() + 1);
+
+    const lineItems = familyScholars.map((s) => ({
+      scholarId: s.id,
+      scholarName: s.name,
+      school: schoolName(state, s.schoolId),
+      transportPlan: PLAN_DISPLAY_LABELS[s.transportPlan] ?? '',
+      amount: Number(fees[s.id] || 0),
+      notifyAddon: s.notifyAddon,
+      addonAmount: s.notifyAddon ? 100 : 0,
+    }));
+
+    setDraft({
+      invoiceNumber: null,
+      periodStart,
+      periodEnd,
+      issuedDate,
+      dueDate,
+      lineItems,
+      subtotal,
+      total: subtotal,
+    });
+  }
+
+  async function handleSend() {
     setSubmitting(true);
     setError('');
     try {
       const lineItems = familyScholars.map((s) => ({ scholarId: s.id, amount: Number(fees[s.id] || 0) }));
-      const { invoice } = await generateInvoice({ billingGuardianId: billing.id, lineItems });
+      const { invoice } = await generateInvoice({ billingGuardianId: billing.id, periodStart, periodEnd, lineItems });
       setSentInvoiceId(invoice.id);
     } catch (err) {
       setError(err.message);
@@ -81,6 +126,24 @@ export default function GenerateInvoiceScreen() {
     );
   }
 
+  if (draft) {
+    return (
+      <Screen>
+        <TopBar title="Preview invoice" onBack={() => setDraft(null)} />
+        <InvoicePdfPreview invoice={draft} billing={billing} />
+        {error && <EmptyState title={error} />}
+        <div className="form-row">
+          <Button size="lg" full onClick={handleSend} disabled={submitting}>
+            {submitting ? 'Sending…' : 'Send invoice'}
+          </Button>
+          <Button variant="secondary" full onClick={() => setDraft(null)} disabled={submitting}>
+            Back — amend details
+          </Button>
+        </div>
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
       <TopBar title="Generate invoice" onBack={() => navigate(`/owner/scholars/${scholar.id}`)} />
@@ -93,6 +156,15 @@ export default function GenerateInvoiceScreen() {
         </p>
       </Card>
 
+      <Card className="form-row">
+        <Field label="Period from">
+          <TextInput type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} required />
+        </Field>
+        <Field label="Period to">
+          <TextInput type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} required />
+        </Field>
+      </Card>
+
       <div className="form-section">
         {familyScholars.map((s) => (
           <Card key={s.id} className="invoice-line-editor">
@@ -101,7 +173,7 @@ export default function GenerateInvoiceScreen() {
               {s.notifyAddon && <Badge tone="warning">+ WhatsApp R100</Badge>}
             </div>
             <span className="assignment-meta">
-              {schoolName(state, s.schoolId)} · {s.transportPlan === 'full' ? 'Drop-off & pick-up' : s.transportPlan === 'morning' ? 'School drop-off only' : 'Home pick-up only'}
+              {schoolName(state, s.schoolId)} · {PLAN_DISPLAY_LABELS[s.transportPlan]}
             </span>
             <label className="invoice-fee-input">
               R
@@ -122,8 +194,8 @@ export default function GenerateInvoiceScreen() {
       </Card>
 
       {error && <EmptyState title={error} />}
-      <Button size="lg" full onClick={handleGenerate} disabled={submitting}>
-        {submitting ? 'Generating…' : 'Generate & send invoice'}
+      <Button size="lg" full onClick={handleGeneratePreview}>
+        Generate invoice
       </Button>
     </Screen>
   );

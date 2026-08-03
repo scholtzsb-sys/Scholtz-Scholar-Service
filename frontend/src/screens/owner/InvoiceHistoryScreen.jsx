@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Screen, TopBar, Card, Badge, EmptyState } from '../../components/ui/Primitives';
 import { useApp } from '../../state/AppContext';
 import { api } from '../../lib/api';
+import { formatPeriod, invoiceStatusMeta } from '../../lib/invoiceFormat';
 import './owner.css';
 import './invoicing.css';
 
@@ -33,18 +34,21 @@ export default function InvoiceHistoryScreen() {
       )}
       {invoices?.length > 0 && (
         <Card style={{ padding: 4 }}>
-          {invoices.map((inv) => (
-            <button key={inv.id} type="button" className="invoice-history-row" onClick={() => navigate(`/owner/invoices/${inv.id}`)}>
-              <div>
-                <strong>{inv.month}</strong>
-                <div className="assignment-meta">{inv.invoiceNumber}</div>
-              </div>
-              <div className="invoice-history-right">
-                <span>R{inv.total.toFixed(2)}</span>
-                <Badge tone={inv.status === 'PAID' ? 'success' : 'warning'}>{inv.status === 'PAID' ? 'Paid' : 'Unpaid'}</Badge>
-              </div>
-            </button>
-          ))}
+          {invoices.map((inv) => {
+            const statusMeta = invoiceStatusMeta(inv.status);
+            return (
+              <button key={inv.id} type="button" className="invoice-history-row" onClick={() => navigate(`/owner/invoices/${inv.id}`)}>
+                <div>
+                  <strong>{formatPeriod(inv.periodStart, inv.periodEnd)}</strong>
+                  <div className="assignment-meta">{inv.invoiceNumber}</div>
+                </div>
+                <div className="invoice-history-right">
+                  <span>R{inv.total.toFixed(2)}</span>
+                  <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
+                </div>
+              </button>
+            );
+          })}
         </Card>
       )}
     </Screen>

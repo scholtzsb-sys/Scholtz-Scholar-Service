@@ -70,6 +70,6 @@ export const api = {
   listFamilyInvoices: (billingGuardianId) => request(`/invoices/family/${billingGuardianId}`),
   getInvoice: (id) => request(`/invoices/${id}`),
   generateInvoice: (payload) => request('/invoices', { method: 'POST', body: payload }),
-  markInvoicePaid: (id, paid) => request(`/invoices/${id}/paid`, { method: 'POST', body: { paid } }),
+  recordPayment: (id, amount) => request(`/invoices/${id}/payments`, { method: 'POST', body: { amount } }),
   attachProof: (id, filename) => request(`/invoices/${id}/proof`, { method: 'POST', body: { filename } }),
 };
