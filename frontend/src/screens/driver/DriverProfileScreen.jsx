@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Screen, TopBar, Card, Button, EmptyState } from '../../components/ui/Primitives';
 import { useApp, useAppActions } from '../../state/AppContext';
 import { useCurrentDriver } from '../../state/hooks';
+import { schoolName } from '../../lib/selectors';
+import '../owner/owner.css';
 import './driver.css';
 
 export default function DriverProfileScreen() {
@@ -13,7 +15,9 @@ export default function DriverProfileScreen() {
   const [switching, setSwitching] = useState(false);
   const [error, setError] = useState('');
 
-  const assignedToday = state.scholars.filter((s) => s.driverId === driver?.id && s.active).length;
+  const assignedScholars = state.scholars
+    .filter((s) => s.driverId === driver?.id && s.active)
+    .sort((a, b) => (a.pickupOrder ?? 0) - (b.pickupOrder ?? 0));
 
   function handleLogOut() {
     logOut();
@@ -52,11 +56,27 @@ export default function DriverProfileScreen() {
           <span className="section-heading">Vehicle registration</span>
           <p style={{ margin: 0 }}>{driver.vehicleReg}</p>
         </div>
-        <div>
-          <span className="section-heading">Today's assigned scholars</span>
-          <p style={{ margin: 0 }}>{assignedToday}</p>
-        </div>
       </Card>
+
+      <div>
+        <span className="section-heading">Today's assigned scholars ({assignedScholars.length})</span>
+        {assignedScholars.length === 0 ? (
+          <Card style={{ marginTop: 8 }}>No scholars currently assigned.</Card>
+        ) : (
+          <Card style={{ padding: 4, marginTop: 8 }}>
+            {assignedScholars.map((s) => (
+              <div key={s.id} className="scholar-row" style={{ padding: '12px' }}>
+                <div className="scholar-row-info">
+                  <span className="scholar-row-name">
+                    #{s.pickupOrder} {s.name}
+                  </span>
+                  <span className="scholar-row-meta">{schoolName(state, s.schoolId)}</span>
+                </div>
+              </div>
+            ))}
+          </Card>
+        )}
+      </div>
 
       {canSwitchToOwner && (
         <>

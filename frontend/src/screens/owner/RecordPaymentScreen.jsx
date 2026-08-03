@@ -15,15 +15,19 @@ export default function RecordPaymentScreen() {
 
   const [invoice, setInvoice] = useState(null);
   const [error, setError] = useState('');
-  const [paymentType, setPaymentType] = useState('full');
-  const [partialAmount, setPartialAmount] = useState('');
+  const [amountInput, setAmountInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState(null); // { payment, invoice } once recorded
 
   useEffect(() => {
     api
       .getInvoice(invoiceId)
-      .then(setInvoice)
+      .then((inv) => {
+        setInvoice(inv);
+        // Pre-filled with the full balance — the owner edits it down for a
+        // partial payment rather than toggling between two modes first.
+        setAmountInput(balanceDue(inv).toFixed(2));
+      })
       .catch((err) => setError(err.message));
   }, [invoiceId]);
 
@@ -60,7 +64,7 @@ export default function RecordPaymentScreen() {
     );
   }
 
-  const amount = paymentType === 'full' ? balance : Number(partialAmount) || 0;
+  const amount = Number(amountInput) || 0;
   const canSubmit = amount > 0 && !submitting;
 
   async function handleGenerateReceipt() {
@@ -97,27 +101,17 @@ export default function RecordPaymentScreen() {
       </Card>
 
       <Card className="form-section">
-        <label className="toggle-row" style={{ cursor: 'pointer' }}>
-          <input type="radio" name="paymentType" checked={paymentType === 'full'} onChange={() => setPaymentType('full')} />
-          <span style={{ flex: 1, textAlign: 'left' }}>Paid in full (R{balance.toFixed(2)})</span>
-        </label>
-        <label className="toggle-row" style={{ cursor: 'pointer' }}>
-          <input type="radio" name="paymentType" checked={paymentType === 'partial'} onChange={() => setPaymentType('partial')} />
-          <span style={{ flex: 1, textAlign: 'left' }}>Partial payment</span>
-        </label>
-        {paymentType === 'partial' && (
-          <Field label="Amount paid (R)" hint={`Balance due is R${balance.toFixed(2)}`}>
-            <TextInput
-              type="number"
-              min="0"
-              step="0.01"
-              value={partialAmount}
-              onChange={(e) => setPartialAmount(e.target.value)}
-              placeholder="e.g. 500"
-              autoFocus
-            />
-          </Field>
-        )}
+        <Field label="Amount paid (R)" hint={`Balance due is R${balance.toFixed(2)} — edit this for a partial payment`}>
+          <TextInput
+            type="number"
+            min="0"
+            step="0.01"
+            value={amountInput}
+            onChange={(e) => setAmountInput(e.target.value)}
+            placeholder="e.g. 500"
+            autoFocus
+          />
+        </Field>
       </Card>
 
       {error && <EmptyState title={error} />}
