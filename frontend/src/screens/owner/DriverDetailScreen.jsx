@@ -44,26 +44,35 @@ export default function DriverDetailScreen() {
         <span className="section-heading">Today's stops ({assigned.length})</span>
         <div className="trip-stage-list">
           {assigned.map((s) => {
-            const statuses = stageStatusForScholar(state, s);
+            const { absent, absentAt, stages } = stageStatusForScholar(state, s);
             return (
               <Card key={s.id}>
                 <strong>
                   #{s.pickupOrder} {s.name}
                 </strong>
-                <div className="trip-stage-list" style={{ marginTop: 8 }}>
-                  {statuses.map((st) => (
-                    <div key={st.stage} className="trip-stage-row" style={{ padding: '6px 0' }}>
-                      <span>{STAGE_LABELS[st.stage]}</span>
-                      {st.done ? (
-                        <span className="stage-time">
-                          {new Date(st.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      ) : (
-                        <span className="stage-pending">Pending</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                {absent ? (
+                  <div className="trip-stage-row" style={{ padding: '6px 0' }}>
+                    <span>Absent today</span>
+                    <span className="stage-time">
+                      {new Date(absentAt).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="trip-stage-list" style={{ marginTop: 8 }}>
+                    {stages.map((st) => (
+                      <div key={st.stage} className="trip-stage-row" style={{ padding: '6px 0' }}>
+                        <span>{STAGE_LABELS[st.stage]}</span>
+                        {st.done ? (
+                          <span className="stage-time">
+                            {new Date(st.timestamp).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        ) : (
+                          <span className="stage-pending">Pending</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Card>
             );
           })}

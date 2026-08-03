@@ -28,6 +28,9 @@ enum TripEventType {
   SCHOOL_DROPOFF
   SCHOOL_PICKUP
   HOME_DROPOFF
+  // Driver-reported: scholar wasn't collected today. Terminal for the day —
+  // no further stage events are expected once this is logged.
+  ABSENT
 }
 
 enum InvoiceStatus {

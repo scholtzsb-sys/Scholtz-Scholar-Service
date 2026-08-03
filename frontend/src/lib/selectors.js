@@ -11,13 +11,29 @@ export function todaysEventsFor(state, scholarId) {
   return state.tripEvents.filter((e) => e.scholarId === scholarId && isSameDay(e.timestamp, new Date()));
 }
 
+// Returns { absent, stages }. A scholar marked absent today is terminal for
+// the day — no further per-stage tracking applies, regardless of which
+// stages (if any) were already logged before the absence was reported.
 export function stageStatusForScholar(state, scholar) {
   const plan = TRANSPORT_PLANS[scholar.transportPlan];
   const events = todaysEventsFor(state, scholar.id);
-  return plan.stages.map((stage) => {
+  const absentEvent = events.find((e) => e.eventType === 'absent');
+  if (absentEvent) {
+    return { absent: true, absentAt: absentEvent.timestamp, stages: [] };
+  }
+  const stages = plan.stages.map((stage) => {
     const event = events.find((e) => e.eventType === stage);
     return { stage, done: Boolean(event), timestamp: event?.timestamp ?? null };
   });
+  return { absent: false, stages };
+}
+
+// The next stage a driver still needs to tap for this scholar today, or
+// null if they're absent or already done with every stage.
+export function nextStageForScholar(state, scholar) {
+  const { absent, stages } = stageStatusForScholar(state, scholar);
+  if (absent) return null;
+  return stages.find((st) => !st.done)?.stage ?? null;
 }
 
 export function driverTodayProgress(state, driverId) {
@@ -25,9 +41,10 @@ export function driverTodayProgress(state, driverId) {
   let total = 0;
   let done = 0;
   scholars.forEach((s) => {
-    const statuses = stageStatusForScholar(state, s);
-    total += statuses.length;
-    done += statuses.filter((st) => st.done).length;
+    const { absent, stages } = stageStatusForScholar(state, s);
+    if (absent) return; // excluded from the day's tally — nothing left to do
+    total += stages.length;
+    done += stages.filter((st) => st.done).length;
   });
   return { done, total, scholars };
 }
@@ -37,8 +54,9 @@ export function scholarsUncollectedFromHomeToday(state) {
     if (!s.active) return false;
     const plan = TRANSPORT_PLANS[s.transportPlan];
     if (!plan.stages.includes('home_pickup')) return false;
-    const events = todaysEventsFor(state, s.id);
-    return !events.some((e) => e.eventType === 'home_pickup');
+    const { absent, stages } = stageStatusForScholar(state, s);
+    if (absent) return false; // expected to be uncollected — not an alert
+    return !stages.find((st) => st.stage === 'home_pickup')?.done;
   });
 }
 

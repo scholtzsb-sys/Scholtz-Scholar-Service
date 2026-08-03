@@ -66,6 +66,8 @@ function reducer(state, action) {
       return { ...state, ...action.collections };
     case 'APPEND_TRIP_EVENT':
       return { ...state, tripEvents: [...state.tripEvents, action.event] };
+    case 'APPEND_TRIP_EVENTS':
+      return { ...state, tripEvents: [...state.tripEvents, ...action.events] };
     case 'RESET':
       return { ...initialState, authLoading: false };
     default:
@@ -270,6 +272,18 @@ export function useAppActions() {
     [dispatch]
   );
 
+  // Logs the same event for several scholars in one request (e.g. a whole
+  // school's worth of drop-offs). Returns per-scholar notification results
+  // so the caller can summarize what was sent.
+  const logBulkTripEvent = useCallback(
+    async (scholarIds, eventType) => {
+      const { results } = await api.logBulkTripEvents(scholarIds, eventType);
+      dispatch({ type: 'APPEND_TRIP_EVENTS', events: results.map((r) => normalizeTripEvent(r.event)) });
+      return results;
+    },
+    [dispatch]
+  );
+
   const generateInvoice = useCallback((payload) => api.generateInvoice(payload), []);
   const recordPayment = useCallback((id, amount) => api.recordPayment(id, amount), []);
   const attachProofOfPayment = useCallback((id, filename) => api.attachProof(id, filename), []);
@@ -294,6 +308,7 @@ export function useAppActions() {
       reactivateDriver,
       deleteDriver,
       logTripEvent,
+      logBulkTripEvent,
       generateInvoice,
       recordPayment,
       attachProofOfPayment,
@@ -317,6 +332,7 @@ export function useAppActions() {
       reactivateDriver,
       deleteDriver,
       logTripEvent,
+      logBulkTripEvent,
       generateInvoice,
       recordPayment,
       attachProofOfPayment,

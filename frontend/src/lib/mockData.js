@@ -29,6 +29,7 @@ export const STAGE_ACTION_LABELS = {
   school_dropoff: 'Dropped at school',
   school_pickup: 'Picked up from school',
   home_dropoff: 'Dropped at home',
+  absent: 'Marked absent',
 };
 
 // Matches backend/prisma/seed.js — all demo accounts share this password.

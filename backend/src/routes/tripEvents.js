@@ -17,23 +17,13 @@ router.get('/', requireAuth, async (req, res) => {
   res.json(await prisma.tripEvent.findMany({ where, orderBy: { timestamp: 'asc' } }));
 });
 
-// Trip tracking and notification delivery are decoupled by design: the
-// event is always logged (feeds the owner dashboard/driver-detail history)
-// regardless of any guardian's opt-in status — only the message send is
-// gated, inside sendTripNotification.
-router.post('/', requireAuth, async (req, res) => {
-  const { scholarId, eventType } = req.body;
-  if (!scholarId || !eventType) {
-    return res.status(400).json({ error: 'scholarId and eventType are required' });
-  }
-
+async function createTripEvent(scholarId, eventType, driverId) {
   const scholar = await prisma.scholar.findUnique({
     where: { id: scholarId },
     include: { guardianLinks: { include: { guardian: true } } },
   });
-  if (!scholar) return res.status(404).json({ error: 'Scholar not found' });
+  if (!scholar) return null;
 
-  const driverId = req.session.role === 'driver' ? req.session.driverId : undefined;
   const normalizedType = eventType.toLowerCase();
 
   const event = await prisma.tripEvent.create({
@@ -49,7 +39,43 @@ router.post('/', requireAuth, async (req, res) => {
 
   const notifications = await sendTripNotification(stubWhatsappClient, scholar, normalizedType, event.timestamp, guardians);
 
-  res.status(201).json({ event, notifications });
+  return { event, notifications };
+}
+
+// Trip tracking and notification delivery are decoupled by design: the
+// event is always logged (feeds the owner dashboard/driver-detail history)
+// regardless of any guardian's opt-in status — only the message send is
+// gated, inside sendTripNotification.
+router.post('/', requireAuth, async (req, res) => {
+  const { scholarId, eventType } = req.body;
+  if (!scholarId || !eventType) {
+    return res.status(400).json({ error: 'scholarId and eventType are required' });
+  }
+
+  const driverId = req.session.role === 'driver' ? req.session.driverId : undefined;
+  const result = await createTripEvent(scholarId, eventType, driverId);
+  if (!result) return res.status(404).json({ error: 'Scholar not found' });
+
+  res.status(201).json(result);
+});
+
+// Lets a driver clear an entire school's worth of scholars for the current
+// stage in one tap (e.g. everyone dropped at the same school) instead of
+// tapping each scholar individually.
+router.post('/bulk', requireAuth, async (req, res) => {
+  const { scholarIds, eventType } = req.body;
+  if (!Array.isArray(scholarIds) || scholarIds.length === 0 || !eventType) {
+    return res.status(400).json({ error: 'scholarIds (non-empty array) and eventType are required' });
+  }
+
+  const driverId = req.session.role === 'driver' ? req.session.driverId : undefined;
+  const results = [];
+  for (const scholarId of scholarIds) {
+    const result = await createTripEvent(scholarId, eventType, driverId);
+    if (result) results.push({ scholarId, ...result });
+  }
+
+  res.status(201).json({ results });
 });
 
 export default router;

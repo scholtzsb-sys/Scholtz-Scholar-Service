@@ -65,6 +65,7 @@ export const api = {
   // Trip events
   listTripEvents: ({ today } = {}) => request(`/trip-events${today ? '?today=1' : ''}`),
   logTripEvent: (payload) => request('/trip-events', { method: 'POST', body: payload }),
+  logBulkTripEvents: (scholarIds, eventType) => request('/trip-events/bulk', { method: 'POST', body: { scholarIds, eventType } }),
 
   // Invoices
   listFamilyInvoices: (billingGuardianId) => request(`/invoices/family/${billingGuardianId}`),

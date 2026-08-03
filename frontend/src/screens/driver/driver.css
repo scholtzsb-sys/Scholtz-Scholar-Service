@@ -75,6 +75,12 @@
   color: var(--success);
 }
 
+.stop-absent-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
 .stop-action-btn {
   border: none;
   border-radius: var(--radius-md);
@@ -89,6 +95,60 @@
 
 .stop-action-btn:active {
   transform: scale(0.98);
+}
+
+.stop-absent-btn {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+  align-self: center;
+}
+
+.bulk-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bulk-action-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--purple-tint);
+}
+
+.bulk-action-card span {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.bulk-action-btn {
+  border: none;
+  border-radius: var(--radius-sm);
+  background: #5c3fc4;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.toast-entry {
+  margin-bottom: 6px;
+}
+
+.toast-scholar-name {
+  font-weight: 700;
+  margin: 0 0 2px;
 }
 
 .notify-toast {

@@ -18,6 +18,15 @@
  *     is used. A guardian who hasn't opened today's session still gets
  *     notified; it just costs the business a per-message template fee.
  *
+ *  3. NOTIFIABLE EVENT TYPES ONLY:
+ *     Only drop-off events (school_dropoff, home_dropoff) send a message.
+ *     Pickup events (home_pickup, school_pickup) and the absent marker are
+ *     still recorded as TripEvents for tracking/dashboard purposes — they
+ *     just never reach sendTripNotification's per-guardian send logic.
+ *     Parents care whether their child arrived safely, not that the
+ *     driver's van has left the house — sending on every stage would be
+ *     noise (and, for paid template sends, unnecessary cost).
+ *
  * This separation matters: opting out of the daily "reply to save us
  * money" prompt must never be confused with opting out of safety
  * notifications. Only the explicit notify toggle controls delivery.
@@ -29,6 +38,9 @@
  */
 
 const SESSION_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// Only drop-offs are notified — see rule 3 in the header comment above.
+const NOTIFIABLE_EVENT_TYPES = new Set(['school_dropoff', 'home_dropoff']);
 
 /**
  * Returns true if this guardian should receive notifications at all.
@@ -83,6 +95,15 @@ export function buildMessageText(scholar, eventType, timestamp) {
  * @returns {Promise<Array<{ guardianId: string, sent: boolean, channel: string|null, reason: string|null }>>}
  */
 export async function sendTripNotification(whatsappClient, scholar, eventType, timestamp, guardians) {
+  if (!NOTIFIABLE_EVENT_TYPES.has(eventType)) {
+    return guardians.map((guardian) => ({
+      guardianId: guardian.id,
+      sent: false,
+      channel: null,
+      reason: 'this stage is tracked but does not send a WhatsApp message',
+    }));
+  }
+
   const messageText = buildMessageText(scholar, eventType, timestamp);
   const results = [];
 
